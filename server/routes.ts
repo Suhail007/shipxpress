@@ -465,6 +465,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client impersonation endpoint (super admin only)
+  app.post('/api/impersonate-client/:clientId', isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    const { clientId } = req.params;
+    
+    try {
+      // Check if user is super admin
+      const currentUser = await storage.getUser(userId);
+      if (!currentUser || currentUser.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Only super admins can impersonate clients' });
+      }
+      
+      const client = await storage.getClient(parseInt(clientId));
+      if (!client) {
+        return res.status(404).json({ message: 'Client not found' });
+      }
+      
+      // Create a user session for the client
+      const user = await storage.upsertUser({
+        id: `client_${client.id}`,
+        email: client.contactEmail,
+        firstName: client.name.split(' ')[0],
+        lastName: client.name.split(' ').slice(1).join(' '),
+        profileImageUrl: null,
+        role: 'client',
+        clientId: client.id,
+      });
+      
+      // Update the session to impersonate the client
+      req.user = {
+        claims: {
+          sub: user.id,
+          email: user.email,
+          first_name: user.firstName,
+          last_name: user.lastName,
+          profile_image_url: user.profileImageUrl,
+        }
+      };
+      
+      res.json({ message: 'Client impersonation successful', user });
+    } catch (error) {
+      console.error('Client impersonation error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // Void Order Route
   app.post('/api/orders/:id/void', isAuthenticated, async (req: any, res) => {
     try {

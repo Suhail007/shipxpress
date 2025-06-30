@@ -280,6 +280,29 @@ export default function SuperAdmin() {
     createBatchMutation.mutate(data);
   };
 
+  const handleLoginAsClient = async (clientId: number) => {
+    try {
+      const response = await apiRequest(`/api/impersonate-client/${clientId}`, {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Logged in as client successfully",
+        });
+        // Refresh the page to update user context
+        window.location.reload();
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to login as client",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading || statsLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
@@ -295,9 +318,17 @@ export default function SuperAdmin() {
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
-            <p className="mt-2 text-gray-600">Manage all clients, drivers, zones, and route optimization</p>
+          <div className="flex justify-between items-center py-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
+              <p className="mt-2 text-gray-600">Manage all clients, drivers, zones, and route optimization</p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => window.location.href = "/api/logout"}
+            >
+              Logout
+            </Button>
           </div>
         </div>
       </div>
@@ -456,35 +487,45 @@ export default function SuperAdmin() {
                       <TableHead>Phone</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {clientsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={7} className="text-center py-8">
                           Loading clients...
                         </TableCell>
                       </TableRow>
                     ) : clients.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={7} className="text-center py-8">
                           No clients found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      clients.map((client) => (
+                      clients.map((client: any) => (
                         <TableRow key={client.id}>
                           <TableCell className="font-medium">{client.name}</TableCell>
                           <TableCell>{client.address}</TableCell>
-                          <TableCell>{client.contact_email}</TableCell>
-                          <TableCell>{client.contact_phone}</TableCell>
+                          <TableCell>{client.contactEmail}</TableCell>
+                          <TableCell>{client.contactPhone}</TableCell>
                           <TableCell>
-                            <Badge variant={client.is_active ? "default" : "secondary"}>
-                              {client.is_active ? "Active" : "Inactive"}
+                            <Badge variant={client.isActive ? "default" : "secondary"}>
+                              {client.isActive ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {new Date(client.created_at).toLocaleDateString()}
+                            {new Date(client.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleLoginAsClient(client.id)}
+                            >
+                              Login as Client
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
