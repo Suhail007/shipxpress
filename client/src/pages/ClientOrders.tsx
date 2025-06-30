@@ -158,9 +158,9 @@ export default function ClientOrders() {
               <Package className="h-4 w-4" />
               <span>Pending</span>
             </TabsTrigger>
-            <TabsTrigger value="void" className="flex items-center space-x-2">
+            <TabsTrigger value="voided" className="flex items-center space-x-2">
               <X className="h-4 w-4" />
-              <span>Void</span>
+              <span>Voided</span>
             </TabsTrigger>
             <TabsTrigger value="delivered" className="flex items-center space-x-2">
               <Check className="h-4 w-4" />
@@ -210,17 +210,17 @@ export default function ClientOrders() {
             </Card>
           </TabsContent>
 
-          {/* Void Orders Tab */}
-          <TabsContent value="void" className="space-y-6">
+          {/* Voided Orders Tab */}
+          <TabsContent value="voided" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Void Orders</CardTitle>
+                <CardTitle>Voided Orders</CardTitle>
                 <CardDescription>
                   Orders that have been voided or cancelled
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <OrdersTable showFilters={true} statusFilter="void" />
+                <OrdersTable showFilters={true} statusFilter="voided" />
               </CardContent>
             </Card>
           </TabsContent>

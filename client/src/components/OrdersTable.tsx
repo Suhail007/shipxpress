@@ -191,7 +191,7 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
                     <SelectItem value="in_transit">In Transit</SelectItem>
                     <SelectItem value="delivered">Delivered</SelectItem>
                     <SelectItem value="failed">Failed</SelectItem>
-                    <SelectItem value="void">Void</SelectItem>
+                    <SelectItem value="voided">Voided</SelectItem>
                   </SelectContent>
                 </Select>
               )}

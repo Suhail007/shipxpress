@@ -88,7 +88,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Driver profile not found" });
         }
         orders = await storage.getOrdersForDriver(driver.id, status);
+      } else if (user.sub.startsWith('client_')) {
+        // Client impersonation - get orders for specific client
+        const clientId = parseInt(user.sub.replace('client_', ''));
+        orders = await storage.getOrdersForClient(clientId, { status, search });
       } else {
+        // Super admin - get all orders
         orders = await storage.getAllOrders({ status, search });
       }
       
