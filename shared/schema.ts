@@ -61,6 +61,11 @@ export const orders = pgTable("orders", {
   driverId: integer("driver_id").references(() => drivers.id),
   status: varchar("status").notNull().default("pending"), // pending, assigned, picked, in_transit, delivered, failed
   
+  // Customer info for labels and display
+  customerName: varchar("customer_name"),
+  customerPhone: varchar("customer_phone"),
+  customerEmail: varchar("customer_email"),
+  
   // Delivery Address - structured fields
   deliveryLine1: varchar("delivery_line1").notNull(),
   deliveryLine2: varchar("delivery_line2").default(""),

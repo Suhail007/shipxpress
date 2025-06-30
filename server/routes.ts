@@ -80,7 +80,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const order = await storage.createOrder({
         ...orderData,
-        customerId: customer.id,
         createdBy: userId,
       });
       
@@ -137,6 +136,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(order);
     } catch (error) {
       console.error("Error updating order status:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid status update data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  // Update order status by order number (for barcode scanning)
+  app.patch("/api/orders/:orderNumber/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const orderNumber = req.params.orderNumber;
+      const statusUpdate = updateOrderStatusSchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      
+      // Find order by order number
+      const order = await storage.getOrderByNumber(orderNumber);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      const updatedOrder = await storage.updateOrderStatus(order.id, statusUpdate, userId);
+      
+      // Log activity
+      await storage.logActivity(
+        userId,
+        "ORDER_STATUS_SCANNED",
+        `Scanned and updated order ${orderNumber} status to ${statusUpdate.status}`,
+        { orderId: order.id, newStatus: statusUpdate.status, scanMethod: "barcode" }
+      );
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Error updating order status via scan:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid status update data", errors: error.errors });
       }

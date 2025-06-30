@@ -21,8 +21,10 @@ import {
   Camera, 
   CheckCircle,
   AlertTriangle,
-  Menu
+  Menu,
+  Scan
 } from "lucide-react";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 export default function DriverApp() {
   const { toast } = useToast();
@@ -45,9 +47,9 @@ export default function DriverApp() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: orders, isLoading: ordersLoading } = useQuery({
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
     queryKey: ["/api/orders"],
-    enabled: isAuthenticated && user?.role === "driver",
+    enabled: isAuthenticated,
   });
 
   const updateStatusMutation = useMutation({
@@ -98,13 +100,13 @@ export default function DriverApp() {
     }
   };
 
-  const currentOrders = orders?.filter((order: any) => 
+  const currentOrders = Array.isArray(orders) ? orders.filter((order: any) => 
     ["assigned", "picked", "in_transit"].includes(order.status)
-  ) || [];
+  ) : [];
 
-  const completedOrders = orders?.filter((order: any) => 
+  const completedOrders = Array.isArray(orders) ? orders.filter((order: any) => 
     ["delivered", "failed"].includes(order.status)
-  ) || [];
+  ) : [];
 
   if (isLoading || !isAuthenticated) {
     return (
@@ -153,7 +155,7 @@ export default function DriverApp() {
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
                       <p className="text-2xl font-bold text-gray-800">
-                        {orders?.length || 0}
+                        {Array.isArray(orders) ? orders.length : 0}
                       </p>
                       <p className="text-sm text-gray-600">Total</p>
                     </div>
@@ -352,6 +354,65 @@ export default function DriverApp() {
                 )}
               </div>
             )}
+
+            {activeTab === "scanner" && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold text-gray-900">Order Scanner</h2>
+                <p className="text-gray-600 text-sm">
+                  Scan shipping labels to update order status at pickup and delivery locations.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-blue-600" />
+                        Pickup Scanner
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <BarcodeScanner 
+                        action="pickup" 
+                        driverId={user?.id ? parseInt(user.id) : undefined}
+                        onScanSuccess={(orderNumber) => {
+                          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        Delivery Scanner
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <BarcodeScanner 
+                        action="delivery" 
+                        driverId={user?.id ? parseInt(user.id) : undefined}
+                        onScanSuccess={(orderNumber) => {
+                          queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-blue-900 mb-2">Quick Instructions:</h3>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                      <li>• Use <strong>Pickup Scanner</strong> when collecting packages from warehouse</li>
+                      <li>• Use <strong>Delivery Scanner</strong> when completing deliveries</li>
+                      <li>• Scan the barcode on the shipping label or enter order number manually</li>
+                      <li>• Status updates automatically when scanning is successful</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </Tabs>
       </div>
@@ -359,21 +420,25 @@ export default function DriverApp() {
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t px-4 py-2">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4 bg-gray-50">
+          <TabsList className="grid w-full grid-cols-5 bg-gray-50">
             <TabsTrigger value="home" className="flex flex-col items-center py-2">
-              <Home className="h-5 w-5 mb-1" />
+              <Home className="h-4 w-4 mb-1" />
               <span className="text-xs">Home</span>
             </TabsTrigger>
             <TabsTrigger value="orders" className="flex flex-col items-center py-2">
-              <Package className="h-5 w-5 mb-1" />
+              <Package className="h-4 w-4 mb-1" />
               <span className="text-xs">Orders</span>
             </TabsTrigger>
+            <TabsTrigger value="scanner" className="flex flex-col items-center py-2">
+              <Scan className="h-4 w-4 mb-1" />
+              <span className="text-xs">Scanner</span>
+            </TabsTrigger>
             <TabsTrigger value="routes" className="flex flex-col items-center py-2">
-              <Route className="h-5 w-5 mb-1" />
+              <Route className="h-4 w-4 mb-1" />
               <span className="text-xs">Routes</span>
             </TabsTrigger>
             <TabsTrigger value="profile" className="flex flex-col items-center py-2">
-              <User className="h-5 w-5 mb-1" />
+              <User className="h-4 w-4 mb-1" />
               <span className="text-xs">Profile</span>
             </TabsTrigger>
           </TabsList>

@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Eye, Route, Edit, Plus, Upload, Phone, MapPin, Clock } from "lucide-react";
+import { Eye, Route, Edit, Plus, Upload, Phone, MapPin, Clock, FileText, Printer } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CreateOrderModal from "./CreateOrderModal";
+import ShippingLabel from "./ShippingLabel";
 import { Order, Driver } from "@shared/schema";
 
 interface OrdersTableProps {
@@ -290,6 +292,19 @@ export default function OrdersTable({ limit, showFilters = true }: OrdersTablePr
                           <Button size="sm" variant="ghost">
                             <Route className="h-4 w-4" />
                           </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="ghost" title="Generate Shipping Label">
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-lg">
+                              <DialogHeader>
+                                <DialogTitle>Shipping Label - {order.orderNumber}</DialogTitle>
+                              </DialogHeader>
+                              <ShippingLabel order={order} />
+                            </DialogContent>
+                          </Dialog>
                           <Button size="sm" variant="ghost">
                             <Edit className="h-4 w-4" />
                           </Button>
