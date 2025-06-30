@@ -8,7 +8,11 @@ import html2canvas from "html2canvas";
 import type { Order } from "@shared/schema";
 
 interface ShippingLabelProps {
-  order: Order;
+  order: Order & {
+    currentPackage?: number;
+    totalPackages?: number;
+    packageDetails?: any;
+  };
   onClose?: () => void;
 }
 
@@ -114,8 +118,12 @@ export default function ShippingLabel({ order, onClose }: ShippingLabelProps) {
               </div>
               <div className="text-right text-xs">
                 <p className="font-bold">Order: {order.orderNumber}</p>
-                <p>Packages: {packages.length}</p>
-                <p>Weight: {totalWeight} lbs</p>
+                {order.currentPackage && order.totalPackages ? (
+                  <p className="font-bold text-lg">Package {order.currentPackage}/{order.totalPackages}</p>
+                ) : (
+                  <p>Packages: {packages.length}</p>
+                )}
+                <p>Weight: {order.packageDetails?.weight || totalWeight} lbs</p>
               </div>
             </div>
           </div>
@@ -170,16 +178,23 @@ export default function ShippingLabel({ order, onClose }: ShippingLabelProps) {
               </div>
             </div>
             
-            {packages.length > 0 && (
-              <div className="mt-2">
-                <p className="font-bold">Package Details:</p>
-                {packages.map((pkg, index) => (
+            <div className="mt-2">
+              <p className="font-bold">Package Details:</p>
+              {order.packageDetails ? (
+                <p className="text-xs">
+                  Package {order.currentPackage}: {order.packageDetails.dimensions?.length || 0}"×{order.packageDetails.dimensions?.width || 0}"×{order.packageDetails.dimensions?.height || 0}" - {order.packageDetails.weight || 0}lbs
+                  {order.packageDetails.description && <br />}<span className="italic">{order.packageDetails.description}</span>
+                </p>
+              ) : packages.length > 0 ? (
+                packages.map((pkg, index) => (
                   <p key={index} className="text-xs">
-                    #{index + 1}: {pkg.length}"×{pkg.width}"×{pkg.height}" - {pkg.weight}lbs
+                    #{index + 1}: {pkg.dimensions?.length || 0}"×{pkg.dimensions?.width || 0}"×{pkg.dimensions?.height || 0}" - {pkg.weight || 0}lbs
                   </p>
-                ))}
-              </div>
-            )}
+                ))
+              ) : (
+                <p className="text-xs">No package details available</p>
+              )}
+            </div>
           </div>
 
           {/* Instructions */}

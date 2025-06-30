@@ -414,8 +414,26 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     },
   });
 
-  const onSubmit = (data: CreateOrderForm) => {
-    createOrderMutation.mutate(data);
+  const onSubmit = async (data: CreateOrderForm) => {
+    // Calculate final distance for accurate billing
+    const finalDistance = await calculateDistance(
+      data.deliveryLine1,
+      data.deliveryCity,
+      data.deliveryState,
+      data.deliveryZip
+    );
+
+    // Calculate total weight from packages
+    const totalWeight = data.packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0);
+
+    // Include weight and distance in the order data for billing
+    const orderData = {
+      ...data,
+      weight: totalWeight,
+      distance: finalDistance
+    };
+
+    createOrderMutation.mutate(orderData);
   };
 
   const addPackage = () => {
