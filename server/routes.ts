@@ -28,6 +28,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Distance calculation using Google Maps API
+  app.post("/api/calculate-distance", async (req, res) => {
+    const { pickup, delivery } = req.body;
+    
+    if (!pickup || !delivery) {
+      return res.status(400).json({ error: "Pickup and delivery addresses required" });
+    }
+
+    try {
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Google Maps API key not configured" });
+      }
+
+      const url = `https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=${encodeURIComponent(pickup)}&destinations=${encodeURIComponent(delivery)}&key=${apiKey}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.rows[0]?.elements[0]?.status === 'OK') {
+        const distanceText = data.rows[0].elements[0].distance.text;
+        const distance = parseFloat(distanceText.replace(/[^\d.]/g, '')); // Extract numeric value
+        
+        res.json({ 
+          distance: Math.round(distance * 10) / 10, // Round to 1 decimal
+          distanceText 
+        });
+      } else {
+        res.json({ distance: 25, distanceText: "25 mi" }); // Default fallback
+      }
+    } catch (error) {
+      console.error('Distance calculation error:', error);
+      res.json({ distance: 25, distanceText: "25 mi" }); // Default fallback
+    }
+  });
+
   // Dashboard stats
   app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
     try {

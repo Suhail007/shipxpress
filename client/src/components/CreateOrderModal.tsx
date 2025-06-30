@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +44,36 @@ const getTodayDate = () => {
 export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [estimatedDistance, setEstimatedDistance] = useState<number>(25);
   const [costEstimate, setCostEstimate] = useState({ weight: 0, distance: 25, total: 0 });
+
+  // Google Maps Distance calculation
+  const calculateDistance = useCallback(async (deliveryAddress: string, city: string, state: string, zip: string) => {
+    if (!deliveryAddress || !city || !state) return 25; // Default distance
+    
+    const pickupAddress = "1049 Industrial Dr, Bensenville, IL 60106";
+    const fullDeliveryAddress = `${deliveryAddress}, ${city}, ${state} ${zip}`;
+    
+    try {
+      const response = await fetch('/api/calculate-distance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pickup: pickupAddress,
+          delivery: fullDeliveryAddress
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.distance || 25;
+      }
+    } catch (error) {
+      console.warn('Distance calculation failed, using default:', error);
+    }
+    
+    return 25; // Fallback to default
+  }, []);
 
   const form = useForm<CreateOrderForm>({
     resolver: zodResolver(insertOrderSchema),
@@ -79,19 +108,40 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     name: "packages"
   });
 
-  // Calculate cost in real-time
+  // Watch form values for real-time calculations
+  const watchedValues = form.watch();
+  const packages = watchedValues.packages || [];
+  const deliveryAddress = watchedValues.deliveryLine1 || "";
+  const deliveryCity = watchedValues.deliveryCity || "";
+  const deliveryState = watchedValues.deliveryState || "";
+  const deliveryZip = watchedValues.deliveryZip || "";
+
+  // Calculate total weight from packages in real-time
   useEffect(() => {
-    const packages = form.watch("packages");
-    const totalWeight = packages?.reduce((sum, pkg) => sum + (pkg.weight || 0), 0) || 0;
-    const estimatedDistance = 25; // Default distance estimate
-    const total = (totalWeight * 0.75) + (estimatedDistance * 0.025);
+    const totalWeight = packages.reduce((sum, pkg) => {
+      return sum + (pkg?.weight || 0);
+    }, 0);
+    
+    const weightCost = totalWeight * 0.75;
+    const distanceCost = estimatedDistance * 0.025;
+    const total = weightCost + distanceCost;
     
     setCostEstimate({
       weight: totalWeight,
       distance: estimatedDistance,
       total: total
     });
-  }, [form.watch("packages")]);
+  }, [packages, estimatedDistance]);
+
+  // Calculate distance when address changes
+  useEffect(() => {
+    if (deliveryAddress && deliveryCity && deliveryState) {
+      calculateDistance(deliveryAddress, deliveryCity, deliveryState, deliveryZip)
+        .then(distance => {
+          setEstimatedDistance(distance);
+        });
+    }
+  }, [deliveryAddress, deliveryCity, deliveryState, deliveryZip, calculateDistance]);
 
   const createOrderMutation = useMutation({
     mutationFn: async (data: CreateOrderForm) => {
@@ -150,7 +200,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>
@@ -160,7 +210,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="h-full">
-            <div className="grid grid-cols-2 gap-6 h-[450px]">
+            <div className="grid grid-cols-2 gap-6 min-h-[500px]">
               {/* Left Side - Order Details */}
               <div className="space-y-4 overflow-y-auto pr-2">
                 {/* Customer Section */}
