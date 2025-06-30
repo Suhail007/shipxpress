@@ -87,6 +87,19 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     }
   }, [toast]);
 
+  // Simple distance calculation using Haversine formula
+  const calculateStraightLineDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }, []);
+
   // Google Maps Distance calculation
   const calculateDistance = useCallback(async (deliveryAddress: string, city: string, state: string, zip: string) => {
     if (!deliveryAddress || !city || !state) return 25; // Default distance
@@ -215,8 +228,8 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
       );
 
       autocompleteRef.current.addListener('place_changed', () => {
-        const place = autocompleteRef.current.getPlace();
-        if (place.address_components) {
+        const place = autocompleteRef.current?.getPlace();
+        if (place && place.address_components) {
           let street = '';
           let city = '';
           let state = '';
@@ -224,8 +237,10 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
           place.address_components.forEach((component: any) => {
             const types = component.types;
-            if (types.includes('street_number') || types.includes('route')) {
-              street += component.long_name + ' ';
+            if (types.includes('street_number')) {
+              street = component.long_name + ' ';
+            } else if (types.includes('route')) {
+              street += component.long_name;
             } else if (types.includes('locality')) {
               city = component.long_name;
             } else if (types.includes('administrative_area_level_1')) {
@@ -235,11 +250,47 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
             }
           });
 
-          // Update form values
-          form.setValue('deliveryLine1', street.trim());
-          form.setValue('deliveryCity', city);
-          form.setValue('deliveryState', state);
-          form.setValue('deliveryZip', zip);
+          // Update form values with trigger to re-render
+          setTimeout(() => {
+            form.setValue('deliveryLine1', street.trim(), { shouldValidate: true });
+            form.setValue('deliveryCity', city, { shouldValidate: true });
+            form.setValue('deliveryState', state, { shouldValidate: true });
+            form.setValue('deliveryZip', zip, { shouldValidate: true });
+          }, 0);
+
+          // Calculate distance if we have coordinates
+          if (place.geometry && place.geometry.location) {
+            const destinationLat = typeof place.geometry.location.lat === 'function' 
+              ? place.geometry.location.lat() 
+              : place.geometry.location.lat;
+            const destinationLng = typeof place.geometry.location.lng === 'function' 
+              ? place.geometry.location.lng() 
+              : place.geometry.location.lng;
+            
+            if (clientLocation) {
+              const distance = calculateStraightLineDistance(
+                clientLocation.lat,
+                clientLocation.lng,
+                destinationLat,
+                destinationLng
+              );
+              setCostEstimate(prev => ({
+                ...prev,
+                distance: Math.round(distance)
+              }));
+            } else {
+              // Use default pickup location (Bensenville, IL)
+              const distance = calculateStraightLineDistance(
+                41.96, -87.93,
+                destinationLat,
+                destinationLng
+              );
+              setCostEstimate(prev => ({
+                ...prev,
+                distance: Math.round(distance)
+              }));
+            }
+          }
         }
       });
     };
@@ -384,7 +435,9 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                         <FormControl>
                           <Input 
                             placeholder="Start typing address..." 
-                            {...field} 
+                            value={field.value}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
                             ref={addressInputRef}
                             className="h-8" 
                           />
