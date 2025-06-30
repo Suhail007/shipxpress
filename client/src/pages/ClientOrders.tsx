@@ -24,19 +24,31 @@ export default function ClientOrders() {
 
   // Calculate billing information
   const calculateBilling = () => {
-    const deliveredOrders = orders.filter((order: any) => order.status === 'delivered');
+    const deliveredOrders = Array.isArray(orders) ? orders.filter((order: any) => order.status === 'delivered') : [];
+    
+    const totalWeight = deliveredOrders.reduce((sum: number, order: any) => {
+      const weight = parseFloat(order.weight) || 0;
+      return sum + weight;
+    }, 0);
+
+    const totalDistance = deliveredOrders.reduce((sum: number, order: any) => {
+      const distance = parseFloat(order.distance) || 0;
+      return sum + distance;
+    }, 0);
     
     const totalCharges = deliveredOrders.reduce((total: number, order: any) => {
-      const weightCharge = (order.weight || 0) * 0.75; // $0.75 per pound
-      const distanceCharge = (order.distance || 0) * 0.025; // $0.025 per mile
+      const weight = parseFloat(order.weight) || 0;
+      const distance = parseFloat(order.distance) || 0;
+      const weightCharge = weight * 0.75; // $0.75 per pound
+      const distanceCharge = distance * 0.025; // $0.025 per mile
       return total + weightCharge + distanceCharge;
     }, 0);
 
     return {
       totalOrders: deliveredOrders.length,
-      totalWeight: deliveredOrders.reduce((sum: number, order: any) => sum + (order.weight || 0), 0),
-      totalDistance: deliveredOrders.reduce((sum: number, order: any) => sum + (order.distance || 0), 0),
-      totalCharges,
+      totalWeight: Number(totalWeight) || 0,
+      totalDistance: Number(totalDistance) || 0,
+      totalCharges: Number(totalCharges) || 0,
       deliveredOrders
     };
   };
@@ -167,7 +179,7 @@ export default function ClientOrders() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{billingData.totalWeight.toFixed(1)} lbs</div>
+                  <div className="text-2xl font-bold">{Number(billingData?.totalWeight || 0).toFixed(1)} lbs</div>
                   <p className="text-xs text-muted-foreground">@$0.75 per pound</p>
                 </CardContent>
               </Card>
@@ -178,7 +190,7 @@ export default function ClientOrders() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{billingData.totalDistance.toFixed(1)} mi</div>
+                  <div className="text-2xl font-bold">{Number(billingData?.totalDistance || 0).toFixed(1)} mi</div>
                   <p className="text-xs text-muted-foreground">@$0.025 per mile</p>
                 </CardContent>
               </Card>
@@ -189,7 +201,7 @@ export default function ClientOrders() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${billingData.totalCharges.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">${Number(billingData?.totalCharges || 0).toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">Current billing period</p>
                 </CardContent>
               </Card>
@@ -227,16 +239,18 @@ export default function ClientOrders() {
                   </TableHeader>
                   <TableBody>
                     {billingData.deliveredOrders.map((order: any) => {
-                      const weightCharge = (order.weight || 0) * 0.75;
-                      const distanceCharge = (order.distance || 0) * 0.025;
+                      const weight = parseFloat(order.weight) || 0;
+                      const distance = parseFloat(order.distance) || 0;
+                      const weightCharge = weight * 0.75;
+                      const distanceCharge = distance * 0.025;
                       const total = weightCharge + distanceCharge;
                       
                       return (
                         <TableRow key={order.id}>
                           <TableCell className="font-medium">{order.orderNumber}</TableCell>
                           <TableCell>{order.customerName}</TableCell>
-                          <TableCell>{(order.weight || 0).toFixed(1)}</TableCell>
-                          <TableCell>{(order.distance || 0).toFixed(1)}</TableCell>
+                          <TableCell>{weight.toFixed(1)}</TableCell>
+                          <TableCell>{distance.toFixed(1)}</TableCell>
                           <TableCell>${weightCharge.toFixed(2)}</TableCell>
                           <TableCell>${distanceCharge.toFixed(2)}</TableCell>
                           <TableCell className="font-medium">${total.toFixed(2)}</TableCell>
