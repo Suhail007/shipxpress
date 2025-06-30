@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -46,12 +46,55 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
   const queryClient = useQueryClient();
   const [estimatedDistance, setEstimatedDistance] = useState<number>(25);
   const [costEstimate, setCostEstimate] = useState({ weight: 0, distance: 25, total: 0 });
+  const [clientLocation, setClientLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const autocompleteRef = useRef<any>(null);
+
+  // Get client's current location
+  const getCurrentLocation = useCallback(() => {
+    setIsLoadingLocation(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setClientLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          setIsLoadingLocation(false);
+          toast({
+            title: "Location Found",
+            description: "Using your current location for distance calculation",
+          });
+        },
+        (error) => {
+          console.warn('Geolocation error:', error);
+          setIsLoadingLocation(false);
+          toast({
+            title: "Location Access Denied",
+            description: "Using default pickup location for distance calculation",
+            variant: "destructive"
+          });
+        }
+      );
+    } else {
+      setIsLoadingLocation(false);
+      toast({
+        title: "Location Not Supported",
+        description: "Using default pickup location for distance calculation",
+        variant: "destructive"
+      });
+    }
+  }, [toast]);
 
   // Google Maps Distance calculation
   const calculateDistance = useCallback(async (deliveryAddress: string, city: string, state: string, zip: string) => {
     if (!deliveryAddress || !city || !state) return 25; // Default distance
     
-    const pickupAddress = "1049 Industrial Dr, Bensenville, IL 60106";
+    // Use client location if available, otherwise use default pickup
+    const pickupLocation = clientLocation 
+      ? `${clientLocation.lat},${clientLocation.lng}`
+      : "1049 Industrial Dr, Bensenville, IL 60106";
     const fullDeliveryAddress = `${deliveryAddress}, ${city}, ${state} ${zip}`;
     
     try {
@@ -59,7 +102,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pickup: pickupAddress,
+          pickup: pickupLocation,
           delivery: fullDeliveryAddress
         })
       });
@@ -73,7 +116,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     }
     
     return 25; // Fallback to default
-  }, []);
+  }, [clientLocation]);
 
   const form = useForm<CreateOrderForm>({
     resolver: zodResolver(insertOrderSchema),
@@ -142,6 +185,76 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
         });
     }
   }, [deliveryAddress, deliveryCity, deliveryState, deliveryZip, calculateDistance]);
+
+  // Load Google Maps script and initialize autocomplete
+  useEffect(() => {
+    const loadGoogleMaps = () => {
+      if ((window as any).google && (window as any).google.maps) {
+        initializeAutocomplete();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeAutocomplete;
+      document.head.appendChild(script);
+    };
+
+    const initializeAutocomplete = () => {
+      if (!addressInputRef.current || !(window as any).google) return;
+
+      autocompleteRef.current = new (window as any).google.maps.places.Autocomplete(
+        addressInputRef.current,
+        {
+          types: ['address'],
+          componentRestrictions: { country: 'us' },
+          fields: ['address_component', 'formatted_address', 'geometry']
+        }
+      );
+
+      autocompleteRef.current.addListener('place_changed', () => {
+        const place = autocompleteRef.current.getPlace();
+        if (place.address_components) {
+          let street = '';
+          let city = '';
+          let state = '';
+          let zip = '';
+
+          place.address_components.forEach((component: any) => {
+            const types = component.types;
+            if (types.includes('street_number') || types.includes('route')) {
+              street += component.long_name + ' ';
+            } else if (types.includes('locality')) {
+              city = component.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+              state = component.short_name;
+            } else if (types.includes('postal_code')) {
+              zip = component.long_name;
+            }
+          });
+
+          // Update form values
+          form.setValue('deliveryLine1', street.trim());
+          form.setValue('deliveryCity', city);
+          form.setValue('deliveryState', state);
+          form.setValue('deliveryZip', zip);
+        }
+      });
+    };
+
+    if (open) {
+      loadGoogleMaps();
+    }
+  }, [open, form]);
+
+  // Get location when modal opens
+  useEffect(() => {
+    if (open && !clientLocation) {
+      getCurrentLocation();
+    }
+  }, [open, clientLocation, getCurrentLocation]);
 
   const createOrderMutation = useMutation({
     mutationFn: async (data: CreateOrderForm) => {
@@ -269,7 +382,12 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                       <FormItem>
                         <FormLabel className="text-xs">Address *</FormLabel>
                         <FormControl>
-                          <Input placeholder="123 Main St" {...field} className="h-8" />
+                          <Input 
+                            placeholder="Start typing address..." 
+                            {...field} 
+                            ref={addressInputRef}
+                            className="h-8" 
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -463,8 +581,25 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                     </div>
                     
                     <div className="flex justify-between items-center py-2 border-b">
-                      <span className="text-sm text-gray-600">Estimated Distance:</span>
-                      <span className="font-medium">{costEstimate.distance} miles</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Estimated Distance:</span>
+                        {!clientLocation && (
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-6 text-xs px-2"
+                            onClick={getCurrentLocation}
+                            disabled={isLoadingLocation}
+                          >
+                            {isLoadingLocation ? "..." : "📍"}
+                          </Button>
+                        )}
+                      </div>
+                      <span className="font-medium">
+                        {costEstimate.distance} miles
+                        {clientLocation && <span className="text-xs text-green-600 ml-1">(from your location)</span>}
+                      </span>
                     </div>
                     
                     <div className="space-y-2">
