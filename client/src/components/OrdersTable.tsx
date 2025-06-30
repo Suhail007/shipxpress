@@ -24,7 +24,7 @@ interface OrdersTableProps {
 export default function OrdersTable({ limit, showFilters = true, statusFilter: propStatusFilter }: OrdersTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState(propStatusFilter || "all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
