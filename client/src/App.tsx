@@ -11,6 +11,7 @@ import Drivers from "@/pages/Drivers";
 import DriverApp from "@/pages/DriverApp";
 import SuperAdmin from "@/pages/SuperAdmin";
 import ClientLogin from "@/pages/ClientLogin";
+import ClientOrders from "@/pages/ClientOrders";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -52,8 +53,8 @@ function Router() {
   if (user?.role === "client") {
     return (
       <Switch>
-        <Route path="/" component={Orders} />
-        <Route path="/orders" component={Orders} />
+        <Route path="/" component={ClientOrders} />
+        <Route path="/orders" component={ClientOrders} />
         <Route component={NotFound} />
       </Switch>
     );
