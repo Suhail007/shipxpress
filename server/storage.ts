@@ -143,11 +143,32 @@ export class DatabaseStorage implements IStorage {
     // Generate order number
     const orderNumber = `ORD-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
     
+    // First create or find customer
+    let customer = await this.getCustomerByPhone(orderData.customerPhone);
+    if (!customer) {
+      customer = await this.createCustomer({
+        name: orderData.customerName,
+        phone: orderData.customerPhone,
+        email: orderData.customerEmail || null,
+      });
+    }
+    
     const [order] = await db
       .insert(orders)
       .values({
-        ...orderData,
         orderNumber,
+        customerId: customer.id,
+        status: "pending",
+        deliveryLine1: orderData.deliveryLine1,
+        deliveryLine2: orderData.deliveryLine2,
+        deliveryCity: orderData.deliveryCity,
+        deliveryState: orderData.deliveryState,
+        deliveryZip: orderData.deliveryZip,
+        deliveryCountry: orderData.deliveryCountry,
+        packages: orderData.packages,
+        pickupDate: orderData.pickupDate,
+        specialInstructions: orderData.specialInstructions,
+        createdBy: orderData.createdBy,
       })
       .returning();
     
@@ -174,15 +195,15 @@ export class DatabaseStorage implements IStorage {
             eq(orders.status, filters.status),
             or(
               like(orders.orderNumber, `%${filters.search}%`),
-              like(orders.pickupAddress, `%${filters.search}%`),
-              like(orders.deliveryAddress, `%${filters.search}%`)
+              like(orders.deliveryLine1, `%${filters.search}%`),
+              like(orders.deliveryCity, `%${filters.search}%`)
             )
           )
         )
         .orderBy(desc(orders.createdAt));
     }
     
-    if (filters?.status) {
+    if (filters?.status && filters.status !== "all") {
       return await db
         .select()
         .from(orders)
@@ -197,8 +218,8 @@ export class DatabaseStorage implements IStorage {
         .where(
           or(
             like(orders.orderNumber, `%${filters.search}%`),
-            like(orders.pickupAddress, `%${filters.search}%`),
-            like(orders.deliveryAddress, `%${filters.search}%`)
+            like(orders.deliveryLine1, `%${filters.search}%`),
+            like(orders.deliveryCity, `%${filters.search}%`)
           )
         )
         .orderBy(desc(orders.createdAt));

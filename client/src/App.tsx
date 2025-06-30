@@ -31,18 +31,10 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
-          {user?.role === "driver" ? (
-            <>
-              <Route path="/" component={DriverApp} />
-              <Route path="/orders" component={DriverApp} />
-            </>
-          ) : (
-            <>
-              <Route path="/" component={Dashboard} />
-              <Route path="/orders" component={Orders} />
-              <Route path="/drivers" component={Drivers} />
-            </>
-          )}
+          <Route path="/" component={Dashboard} />
+          <Route path="/orders" component={Orders} />
+          <Route path="/drivers" component={Drivers} />
+          <Route path="/driver-app" component={DriverApp} />
         </>
       )}
       <Route component={NotFound} />

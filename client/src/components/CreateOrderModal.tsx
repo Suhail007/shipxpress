@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { insertOrderSchema } from "@shared/schema";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -13,85 +14,83 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Trash2, Package } from "lucide-react";
 
-const createOrderSchema = z.object({
-  customerName: z.string().min(1, "Customer name is required"),
-  customerPhone: z.string().min(1, "Phone number is required"),
-  customerEmail: z.string().email().optional().or(z.literal("")),
-  pickupAddress: z.string().min(1, "Pickup address is required"),
-  deliveryAddress: z.string().min(1, "Delivery address is required"),
-  pickupDateTime: z.string().min(1, "Pickup date and time is required"),
-  packageType: z.string().min(1, "Package type is required"),
-  weight: z.string().optional(),
-  priority: z.string().default("standard"),
-  specialInstructions: z.string().optional(),
-});
-
-type CreateOrderForm = z.infer<typeof createOrderSchema>;
+type CreateOrderForm = z.infer<typeof insertOrderSchema>;
 
 interface CreateOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+// Get today's date in YYYY-MM-DD format
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
+
 export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<CreateOrderForm>({
-    resolver: zodResolver(createOrderSchema),
+    resolver: zodResolver(insertOrderSchema),
     defaultValues: {
       customerName: "",
       customerPhone: "",
       customerEmail: "",
-      pickupAddress: "",
-      deliveryAddress: "",
-      pickupDateTime: "",
-      packageType: "",
-      weight: "",
-      priority: "standard",
+      deliveryLine1: "",
+      deliveryLine2: "" as string,
+      deliveryCity: "",
+      deliveryState: "",
+      deliveryZip: "",
+      deliveryCountry: "US",
+      pickupDate: getTodayDate(),
+      packages: [
+        {
+          type: "small_package",
+          weight: 1,
+          dimensions: {
+            length: 10,
+            width: 10,
+            height: 10
+          }
+        }
+      ],
       specialInstructions: "",
     },
   });
 
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "packages"
+  });
+
   const createOrderMutation = useMutation({
     mutationFn: async (data: CreateOrderForm) => {
-      const orderData = {
-        pickupAddress: data.pickupAddress,
-        deliveryAddress: data.deliveryAddress,
-        pickupDateTime: new Date(data.pickupDateTime).toISOString(),
-        packageType: data.packageType,
-        weight: data.weight ? parseFloat(data.weight) : null,
-        priority: data.priority,
-        specialInstructions: data.specialInstructions || null,
-        customerName: data.customerName,
-        customerPhone: data.customerPhone,
-        customerEmail: data.customerEmail || null,
-      };
-      
-      await apiRequest("POST", "/api/orders", orderData);
+      await apiRequest("POST", "/api/orders", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
       toast({
         title: "Order Created",
-        description: "Order has been created successfully.",
+        description: "The order has been created successfully.",
       });
-      form.reset();
       onOpenChange(false);
+      form.reset();
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -117,9 +116,21 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     createOrderMutation.mutate(data);
   };
 
+  const addPackage = () => {
+    append({
+      type: "small_package",
+      weight: 1,
+      dimensions: {
+        length: 10,
+        width: 10,
+        height: 10
+      }
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>
@@ -130,15 +141,17 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Customer Information */}
-            <div>
-              <h4 className="text-md font-medium text-gray-800 mb-4">Customer Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Customer Information</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="customerName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Customer Name</FormLabel>
+                      <FormLabel>Customer Name *</FormLabel>
                       <FormControl>
                         <Input placeholder="Enter customer name" {...field} />
                       </FormControl>
@@ -151,7 +164,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                   name="customerPhone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
+                      <FormLabel>Phone Number *</FormLabel>
                       <FormControl>
                         <Input placeholder="+1 555-0123" {...field} />
                       </FormControl>
@@ -172,21 +185,23 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                     </FormItem>
                   )}
                 />
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            {/* Pickup & Delivery Information */}
-            <div>
-              <h4 className="text-md font-medium text-gray-800 mb-4">Pickup & Delivery</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Delivery Address */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Delivery Address</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="pickupAddress"
+                  name="deliveryLine1"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Pickup Address</FormLabel>
+                      <FormLabel>Address Line 1 *</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Enter pickup address" rows={3} {...field} />
+                        <Input placeholder="Street address, P.O. box, company name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -194,111 +209,256 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                 />
                 <FormField
                   control={form.control}
-                  name="deliveryAddress"
+                  name="deliveryLine2"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Delivery Address</FormLabel>
+                      <FormLabel>Address Line 2 (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Enter delivery address" rows={3} {...field} />
+                        <Input placeholder="Apartment, suite, unit, building, floor, etc." {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="pickupDateTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pickup Date & Time</FormLabel>
-                      <FormControl>
-                        <Input type="datetime-local" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priority</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="deliveryCity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City *</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select priority" />
-                          </SelectTrigger>
+                          <Input placeholder="City" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="standard">Standard</SelectItem>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="urgent">Urgent</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="deliveryState"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="State" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="deliveryZip"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ZIP Code *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="ZIP" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pickup Date */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Pickup Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="pickupDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Pickup Date *</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Package Information */}
-            <div>
-              <h4 className="text-md font-medium text-gray-800 mb-4">Package Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-lg flex items-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Package Details
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addPackage}
+                  className="ml-2"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Package
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {fields.map((field, index) => (
+                  <div key={field.id} className="border rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">Package {index + 1}</h4>
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => remove(index)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`packages.${index}.type`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Package Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="documents">Documents</SelectItem>
+                                <SelectItem value="small_package">Small Package</SelectItem>
+                                <SelectItem value="medium_package">Medium Package</SelectItem>
+                                <SelectItem value="large_package">Large Package</SelectItem>
+                                <SelectItem value="fragile_items">Fragile Items</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`packages.${index}.weight`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Weight (lbs) *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                step="0.1" 
+                                min="0.1"
+                                placeholder="1.0" 
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`packages.${index}.dimensions.length`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Length (in) *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="1"
+                                placeholder="10" 
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`packages.${index}.dimensions.width`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Width (in) *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="1"
+                                placeholder="10" 
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`packages.${index}.dimensions.height`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Height (in) *</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number" 
+                                min="1"
+                                placeholder="10" 
+                                {...field}
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Special Instructions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Additional Information</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <FormField
                   control={form.control}
-                  name="packageType"
+                  name="specialInstructions"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Package Type</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="documents">Documents</SelectItem>
-                          <SelectItem value="small_package">Small Package</SelectItem>
-                          <SelectItem value="medium_package">Medium Package</SelectItem>
-                          <SelectItem value="large_package">Large Package</SelectItem>
-                          <SelectItem value="fragile_items">Fragile Items</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="weight"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Weight (kg)</FormLabel>
+                      <FormLabel>Special Instructions (Optional)</FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.1" placeholder="0.0" {...field} />
+                        <Textarea 
+                          placeholder="Any special handling instructions, delivery notes, etc..." 
+                          rows={3} 
+                          {...field}
+                          value={field.value || ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-              <FormField
-                control={form.control}
-                name="specialInstructions"
-                render={({ field }) => (
-                  <FormItem className="mt-4">
-                    <FormLabel>Special Instructions</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Any special handling instructions..." rows={3} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Action Buttons */}
             <div className="flex space-x-4 pt-4 border-t border-gray-200">

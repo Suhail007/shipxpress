@@ -9,6 +9,7 @@ import {
   integer,
   decimal,
   boolean,
+  date,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
@@ -59,14 +60,20 @@ export const orders = pgTable("orders", {
   customerId: integer("customer_id").references(() => customers.id),
   driverId: integer("driver_id").references(() => drivers.id),
   status: varchar("status").notNull().default("pending"), // pending, assigned, picked, in_transit, delivered, failed
-  priority: varchar("priority").default("standard"), // standard, high, urgent
-  packageType: varchar("package_type"),
-  weight: decimal("weight", { precision: 10, scale: 2 }),
-  pickupAddress: text("pickup_address").notNull(),
-  deliveryAddress: text("delivery_address").notNull(),
-  pickupDateTime: timestamp("pickup_date_time"),
-  deliveryDateTime: timestamp("delivery_date_time"),
-  specialInstructions: text("special_instructions"),
+  
+  // Delivery Address - structured fields
+  deliveryLine1: varchar("delivery_line1").notNull(),
+  deliveryLine2: varchar("delivery_line2").default(""),
+  deliveryCity: varchar("delivery_city").notNull(),
+  deliveryState: varchar("delivery_state").notNull(),
+  deliveryZip: varchar("delivery_zip").notNull(),
+  deliveryCountry: varchar("delivery_country").notNull().default("US"),
+  
+  // Package Information - support multiple boxes
+  packages: jsonb("packages").notNull(), // Array of {type, weight, dimensions: {length, width, height}}
+  
+  pickupDate: varchar("pickup_date").notNull(), // Only date as string YYYY-MM-DD
+  specialInstructions: text("special_instructions").default(""),
   estimatedDeliveryTime: timestamp("estimated_delivery_time"),
   actualDeliveryTime: timestamp("actual_delivery_time"),
   deliveryProofUrl: varchar("delivery_proof_url"),
@@ -175,11 +182,37 @@ export const insertDriverSchema = createInsertSchema(drivers).omit({
   updatedAt: true,
 });
 
-export const insertOrderSchema = createInsertSchema(orders).omit({
-  id: true,
-  orderNumber: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertOrderSchema = z.object({
+  // Customer info for form
+  customerName: z.string().min(1, "Customer name is required"),
+  customerPhone: z.string().min(10, "Phone number is required"),
+  customerEmail: z.string().email().optional().or(z.literal("")),
+  
+  // Delivery address fields
+  deliveryLine1: z.string().min(1, "Address line 1 is required"),
+  deliveryLine2: z.string().optional().default(""),
+  deliveryCity: z.string().min(1, "City is required"),
+  deliveryState: z.string().min(1, "State is required"),
+  deliveryZip: z.string().min(1, "ZIP code is required"),
+  deliveryCountry: z.string().default("US"),
+  
+  // Pickup date
+  pickupDate: z.string().min(1, "Pickup date is required"),
+  
+  // Package array validation
+  packages: z.array(z.object({
+    type: z.string().min(1, "Package type is required"),
+    weight: z.number().min(0.1, "Weight must be greater than 0"),
+    dimensions: z.object({
+      length: z.number().min(1, "Length is required"),
+      width: z.number().min(1, "Width is required"), 
+      height: z.number().min(1, "Height is required"),
+    })
+  })).min(1, "At least one package is required"),
+  
+  // Optional fields
+  specialInstructions: z.string().optional().default(""),
+  createdBy: z.string().optional(),
 });
 
 export const insertCustomerSchema = createInsertSchema(customers).omit({
