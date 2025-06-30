@@ -118,6 +118,11 @@ The application follows a monorepo structure with shared code between client and
   - Added Client Login page accessible from landing page
   - Super admin dashboard shows all clients, drivers, zones, and route batches
   - Complete role-based access: super_admin → full dashboard, client → orders only, driver → mobile app
+  - Added billing system with weight and distance tracking for transparent pricing
+  - Implemented client impersonation feature for super admin users
+  - Added logout functionality to super admin dashboard header
+  - Created dedicated billing interface showing pricing calculations
+  - Added weight and distance fields to orders table for accurate billing
 
 ## Changelog
 - June 30, 2025. Initial setup with basic logistics platform

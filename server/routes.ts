@@ -67,6 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
       
       // Create or find customer
       let customer = await storage.getCustomerByPhone(req.body.customerPhone);
@@ -77,9 +78,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: req.body.customerEmail,
         });
       }
+
+      // Calculate total weight from packages
+      const totalWeight = orderData.packages.reduce((sum, pkg) => sum + pkg.weight, 0);
+      
+      // For now, set distance to 0 - will be calculated during route optimization
+      const distance = 0;
+
+      // Get client ID for client users
+      let clientId = null;
+      if (user?.clientId) {
+        clientId = user.clientId;
+      }
       
       const order = await storage.createOrder({
         ...orderData,
+        weight: totalWeight.toString(),
+        distance: distance.toString(),
         createdBy: userId,
       });
       

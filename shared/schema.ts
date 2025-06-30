@@ -82,6 +82,10 @@ export const orders = pgTable("orders", {
   // Package Information - support multiple boxes
   packages: jsonb("packages").notNull(), // Array of {type, weight, dimensions: {length, width, height}}
   
+  // Billing fields
+  weight: decimal("weight", { precision: 10, scale: 2 }), // Total weight in pounds
+  distance: decimal("distance", { precision: 10, scale: 2 }), // Distance in miles
+  
   pickupDate: varchar("pickup_date").notNull(), // Only date as string YYYY-MM-DD
   specialInstructions: text("special_instructions").default(""),
   
