@@ -87,7 +87,9 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     }
   }, [toast]);
 
-  // Simple distance calculation using Haversine formula
+
+
+  // Simple distance calculation using Haversine formula (fallback)
   const calculateStraightLineDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 3959; // Earth's radius in miles
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -172,6 +174,50 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
   const deliveryState = watchedValues.deliveryState || "";
   const deliveryZip = watchedValues.deliveryZip || "";
 
+  // Real-time distance calculation using Google Maps Distance Matrix API
+  const calculateRealTimeDistance = useCallback(async (destinationLat: number, destinationLng: number) => {
+    try {
+      const pickup = clientLocation 
+        ? `${clientLocation.lat},${clientLocation.lng}`
+        : "1049 Industrial Dr, Bensenville, IL 60106";
+      const delivery = `${destinationLat},${destinationLng}`;
+      
+      const response = await fetch('/api/calculate-distance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pickup, delivery })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const distance = data.distance || 25;
+        setEstimatedDistance(distance);
+        
+        // Update cost estimate immediately
+        const totalWeight = packages.reduce((sum, pkg) => sum + (Number(pkg?.weight) || 0), 0);
+        const weightCost = totalWeight * 0.75;
+        const distanceCost = distance * 0.025;
+        const total = weightCost + distanceCost;
+        
+        setCostEstimate({
+          weight: totalWeight,
+          distance: distance,
+          total: total
+        });
+      }
+    } catch (error) {
+      console.warn('Real-time distance calculation failed:', error);
+      // Fallback to straight-line distance
+      const fallbackDistance = calculateStraightLineDistance(
+        clientLocation?.lat || 41.96, 
+        clientLocation?.lng || -87.93,
+        destinationLat, 
+        destinationLng
+      );
+      setEstimatedDistance(Math.round(fallbackDistance));
+    }
+  }, [clientLocation, packages, calculateStraightLineDistance]);
+
   // Calculate total weight from packages in real-time
   useEffect(() => {
     const totalWeight = packages.reduce((sum, pkg) => {
@@ -250,14 +296,32 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
             }
           });
 
-          // Update form values using React Hook Form's proper methods
-          form.setValue('deliveryLine1', street.trim());
+          // Update form values and force re-render
+          const streetAddress = street.trim();
+          form.setValue('deliveryLine1', streetAddress);
           form.setValue('deliveryCity', city);
           form.setValue('deliveryState', state); 
           form.setValue('deliveryZip', zip);
 
-          // Mark fields as touched and dirty
+          // Update the input field value directly to show selected address
+          if (addressInputRef.current) {
+            addressInputRef.current.value = streetAddress;
+          }
+
+          // Trigger form validation
           form.trigger(['deliveryLine1', 'deliveryCity', 'deliveryState', 'deliveryZip']);
+
+          // Calculate distance immediately if we have coordinates
+          if (place.geometry && place.geometry.location) {
+            const lat = typeof place.geometry.location.lat === 'function' 
+              ? place.geometry.location.lat() 
+              : place.geometry.location.lat;
+            const lng = typeof place.geometry.location.lng === 'function' 
+              ? place.geometry.location.lng() 
+              : place.geometry.location.lng;
+            
+            calculateRealTimeDistance(lat, lng);
+          }
 
           // Calculate distance if we have coordinates
           if (place.geometry && place.geometry.location) {
@@ -298,7 +362,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     if (open) {
       loadGoogleMaps();
     }
-  }, [open, form]);
+  }, [open, form, calculateRealTimeDistance]);
 
   // Get location when modal opens
   useEffect(() => {
