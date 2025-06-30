@@ -1,0 +1,141 @@
+Final Scope (Production-Ready Build) - Business Admin Panel [Dev] {Prod}
+Goal: Launch a fully capable business portal with real-time tracking, billing, user roles, and high-volume order handling.
+
+✅ Full Functional Scope (Beta + Enhancements)
+Advanced Order Creation
+
+
+Manual single order entry (with validation)
+
+
+Bulk CSV Upload
+
+
+Saved Templates (pre-fill repeat orders)
+
+
+API Key generation for direct integration (REST)
+
+
+Order Assignment Rules
+
+
+Auto-assign logic (by zone, driver availability)
+
+
+Show “Assigned Driver” in details
+
+
+ETA shown (based on delivery load + routing)
+
+
+Order Tracking & Filters
+
+
+Real-time status with polling/websocket
+
+
+Filters: by status, delivery zone, date, customer name
+
+
+Color tags for fragile/high-priority
+
+
+Driver Live Location (Read-only)
+
+
+View current driver location on Google Maps
+
+
+Only available post-assignment
+
+
+Invoices & Billing
+
+
+Auto-generate per-order and monthly invoices
+
+
+Download PDF invoice with:
+
+
+Weight
+
+
+Distance
+
+
+Priority charges
+
+
+Billing rules managed by super admin
+
+
+Reports & History
+
+
+Advanced CSV + PDF export options
+
+
+Filtered export by date range/status/type
+
+
+Analytics module (optional future phase)
+
+
+Multi-User Support (Client-side Roles)
+
+
+Admin, Staff, Viewer roles
+
+
+Permissions for: order creation, billing, tracking
+
+
+
+🔐 Security:
+Encrypted session tokens
+
+
+Role-based access controls
+
+
+CSRF protection
+
+
+Secure API key generation and usage limits
+
+
+
+📊 Edge Case Handling:
+Scenario
+System Behavior
+CSV upload fails
+Show detailed row-by-row error
+Duplicate order ID
+Block and suggest alternatives
+Missing required fields
+Highlight and prevent submission
+API key leaked
+Super admin can revoke instantly
+Order not picked in 48h
+Flag as “Delayed” and notify client
+Driver tracking disabled
+Show last known location with note
+
+
+🧪 Final Acceptance Criteria:
+Supports 1000+ orders without crash or lag
+
+
+Works across desktop and tablet
+
+
+No functional bugs in full delivery cycle
+
+
+All data exportable and filterable
+
+
+Secure integration-ready portal for production usage
+

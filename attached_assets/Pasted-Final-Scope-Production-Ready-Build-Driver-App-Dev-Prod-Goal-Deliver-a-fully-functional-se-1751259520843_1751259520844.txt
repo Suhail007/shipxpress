@@ -1,0 +1,253 @@
+Final Scope (Production-Ready Build) - Driver App [Dev] {Prod}
+Goal: Deliver a fully functional, secure, and reliable cross-platform Driver App with all key workflows, validations, and safeguards. The app must handle real-world logistics operations across varied devices, networks, and use cases.
+
+✅ Full Functional Scope (Beta + Final Enhancements)
+
+🧑‍💼 Authentication & Profile
+Full registration flow:
+
+
+Upload: profile photo, ID proof, driving license
+
+
+KYC stage: "Pending Approval", "Approved", "Rejected"
+
+
+Secure login with session management
+
+
+Logout + token expiry
+
+
+Push notification permission prompt
+
+
+
+📦 Order Management
+Orders assigned from admin panel (via API)
+
+
+Filters: All / Today / Upcoming / Completed / Failed
+
+
+Multi-drop trip handling (UI + routing)
+
+
+Basic delivery info:
+
+
+Sender & receiver name
+
+
+Package notes
+
+
+Contact info with click-to-call
+
+
+Order lifecycle:
+
+
+Assigned → Picked → In-Transit → Delivered / Failed
+
+
+
+🗺️ Navigation & Route Optimization
+Google Maps integration with:
+
+
+Single-stop and multi-drop pathing
+
+
+Live ETA
+
+
+Turn-by-turn external navigation (deep linking)
+
+
+Auto-refresh routing if new order added
+
+
+
+✅ Pickup/Drop Validation (Highly Configurable)
+QR/Barcode scan to validate pickup/drop
+
+
+OTP entry screen (numeric input with retry logic)
+
+
+Upload proof photo (minimum 1 image mandatory)
+
+
+Optional signature capture or e-sign pad
+
+
+Fallbacks for failed scans or incorrect OTPs:
+
+
+Manual override with admin permission
+
+
+Comment box for edge cases
+
+
+
+📋 Checklist & Delivery Completion
+Mandatory delivery checklist (configurable via admin)
+
+
+Final remarks (required for failed deliveries)
+
+
+“Mark as Complete” triggers backend sync
+
+
+Delivery submitted with:
+
+
+Timestamp
+
+
+Location
+
+
+Status (Success, Failed, Reattempt Required)
+
+
+
+📍 Live Location Sharing & Geo-Fencing
+Background location sharing (every 10–30 sec)
+
+
+Geo-fencing alerts:
+
+
+Driver exits assigned zone → warning + alert to admin
+
+
+Auto-flag route deviation in trip history
+
+
+Map visible to admin panel + shipper (read-only)
+
+
+
+🛠️ Support Features
+Panic Button:
+
+
+Driver triggers alert → admin notified with location + reason
+
+
+In-App Chat:
+
+
+Real-time secure messaging with admin panel
+
+
+Auto-log of conversation in trip history
+
+
+Offline Mode:
+
+
+Caches order list & trip progress
+
+
+Syncs automatically once back online
+
+
+Queue system for photo uploads and validation retries
+
+
+
+🔒 Security & Permissions
+Root detection
+
+
+Background location permission prompt
+
+
+Device lock & trip freeze if KYC fails
+
+
+Secure token with auto-logout on inactivity
+
+
+End-to-end encryption (location, chat, media uploads)
+
+
+
+📉 Performance Considerations
+Low network handling (retry logic with backoff)
+
+
+Compression of photos before upload
+
+
+Error fallback screens (retry/skip/log)
+
+
+App memory footprint < 150MB (target)
+
+
+Performance-tested on low-end Android (2GB RAM) and iOS (iPhone 7+)
+
+
+
+🧪 Edge Cases & Recovery Logic:
+Scenario
+App Behavior
+QR/OTP invalid
+Show error, allow manual entry/comment after 3 tries
+No network
+Cache locally, auto-sync when online
+Driver skips delivery step
+Alert, disallow trip completion
+Location access denied
+Block trip start, prompt user
+App force-closed mid-trip
+Resume last trip on next open
+Photo upload fails
+Retry option, local queue
+Device is rooted
+App lock screen with warning
+Driver exits geofence
+Alert + auto-log deviation
+Admin changes assignment mid-trip
+Notify driver + refresh UI
+
+
+✅ Final Acceptance Criteria:
+Driver completes a full pickup → delivery flow with:
+
+
+Validation
+
+
+Location tracking
+
+
+Proof submission
+
+
+Admin sees live location, delivery status, uploaded media
+
+
+System handles:
+
+
+Retry logic
+
+
+Network failure
+
+
+Manual fallbacks
+
+
+Smooth UX on Android 10+ and iOS 14+
+
+
+No crashes across 50+ test cases
+
