@@ -10,6 +10,7 @@ import {
   decimal,
   boolean,
   date,
+  time,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
@@ -33,7 +34,8 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").notNull().default("admin"), // admin, driver, staff, viewer
+  role: varchar("role").notNull().default("client"), // super_admin, client, driver, staff
+  clientId: integer("client_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -49,6 +51,7 @@ export const drivers = pgTable("drivers", {
   status: varchar("status").notNull().default("offline"), // online, offline, on_delivery, break
   location: jsonb("location"), // {lat, lng, address}
   isAvailable: boolean("is_available").default(true),
+  assignedZoneId: integer("assigned_zone_id").references(() => zones.id), // One zone per driver
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -58,8 +61,9 @@ export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   orderNumber: varchar("order_number").notNull().unique(),
   customerId: integer("customer_id").references(() => customers.id),
+  clientId: integer("client_id").references(() => clients.id),
   driverId: integer("driver_id").references(() => drivers.id),
-  status: varchar("status").notNull().default("pending"), // pending, assigned, picked, in_transit, delivered, failed
+  status: varchar("status").notNull().default("pending"), // pending, assigned, picked, in_transit, delivered, failed, voided
   
   // Customer info for labels and display
   customerName: varchar("customer_name"),
@@ -73,18 +77,30 @@ export const orders = pgTable("orders", {
   deliveryState: varchar("delivery_state").notNull(),
   deliveryZip: varchar("delivery_zip").notNull(),
   deliveryCountry: varchar("delivery_country").notNull().default("US"),
+  deliveryCoordinates: jsonb("delivery_coordinates"), // {lat, lng}
   
   // Package Information - support multiple boxes
   packages: jsonb("packages").notNull(), // Array of {type, weight, dimensions: {length, width, height}}
   
   pickupDate: varchar("pickup_date").notNull(), // Only date as string YYYY-MM-DD
   specialInstructions: text("special_instructions").default(""),
+  
+  // Route optimization
+  batchId: integer("batch_id").references(() => routeBatches.id),
+  zoneId: integer("zone_id").references(() => zones.id),
+  routeSequence: integer("route_sequence"), // Order in optimized route
+  
   estimatedDeliveryTime: timestamp("estimated_delivery_time"),
   actualDeliveryTime: timestamp("actual_delivery_time"),
   deliveryProofUrl: varchar("delivery_proof_url"),
   createdBy: varchar("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  
+  // Void functionality
+  voidedAt: timestamp("voided_at"),
+  voidedBy: varchar("voided_by").references(() => users.id),
+  voidReason: text("void_reason"),
 });
 
 // Customers table
@@ -119,14 +135,71 @@ export const activityLogs = pgTable("activity_logs", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// Client management table
+export const clients = pgTable("clients", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(),
+  address: text("address").notNull(),
+  contactEmail: varchar("contact_email"),
+  contactPhone: varchar("contact_phone"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Zone management for route optimization
+export const zones = pgTable("zones", {
+  id: serial("id").primaryKey(),
+  name: varchar("name").notNull(), // A, B, C, D
+  direction: varchar("direction").notNull(), // north, south, east, west
+  maxDistance: integer("max_distance").default(300), // miles
+  baseAddress: text("base_address").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Route batches for cutoff time management
+export const routeBatches = pgTable("route_batches", {
+  id: serial("id").primaryKey(),
+  batchDate: date("batch_date").notNull(),
+  cutoffTime: varchar("cutoff_time").default("14:30:00"), // 2:30 PM
+  status: varchar("status").default("pending"), // pending, optimized, assigned, completed
+  orderCount: integer("order_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  optimizedAt: timestamp("optimized_at"),
+});
+
+// Optimized routes for each zone
+export const optimizedRoutes = pgTable("optimized_routes", {
+  id: serial("id").primaryKey(),
+  batchId: integer("batch_id").notNull(),
+  zoneId: integer("zone_id").notNull(),
+  driverId: integer("driver_id"),
+  routeData: jsonb("route_data"), // Contains optimized order sequence
+  estimatedDistance: decimal("estimated_distance", { precision: 10, scale: 2 }),
+  estimatedTime: integer("estimated_time"), // minutes
+  status: varchar("status").default("pending"), // pending, assigned, in_progress, completed
+  createdAt: timestamp("created_at").defaultNow(),
+  assignedAt: timestamp("assigned_at"),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
   driver: one(drivers, {
     fields: [users.id],
     references: [drivers.userId],
   }),
+  client: one(clients, {
+    fields: [users.clientId],
+    references: [clients.id],
+  }),
   createdOrders: many(orders),
   activityLogs: many(activityLogs),
+}));
+
+export const clientsRelations = relations(clients, ({ many }) => ({
+  users: many(users),
+  orders: many(orders),
 }));
 
 export const driversRelations = relations(drivers, ({ one, many }) => ({
@@ -134,13 +207,28 @@ export const driversRelations = relations(drivers, ({ one, many }) => ({
     fields: [drivers.userId],
     references: [users.id],
   }),
+  assignedZone: one(zones, {
+    fields: [drivers.assignedZoneId],
+    references: [zones.id],
+  }),
   orders: many(orders),
+  optimizedRoutes: many(optimizedRoutes),
+}));
+
+export const zonesRelations = relations(zones, ({ many }) => ({
+  drivers: many(drivers),
+  orders: many(orders),
+  optimizedRoutes: many(optimizedRoutes),
 }));
 
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   customer: one(customers, {
     fields: [orders.customerId],
     references: [customers.id],
+  }),
+  client: one(clients, {
+    fields: [orders.clientId],
+    references: [clients.id],
   }),
   driver: one(drivers, {
     fields: [orders.driverId],
@@ -149,6 +237,14 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
   createdByUser: one(users, {
     fields: [orders.createdBy],
     references: [users.id],
+  }),
+  batch: one(routeBatches, {
+    fields: [orders.batchId],
+    references: [routeBatches.id],
+  }),
+  zone: one(zones, {
+    fields: [orders.zoneId],
+    references: [zones.id],
   }),
   statusHistory: many(orderStatusHistory),
 }));
@@ -172,6 +268,26 @@ export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   user: one(users, {
     fields: [activityLogs.userId],
     references: [users.id],
+  }),
+}));
+
+export const routeBatchesRelations = relations(routeBatches, ({ many }) => ({
+  orders: many(orders),
+  optimizedRoutes: many(optimizedRoutes),
+}));
+
+export const optimizedRoutesRelations = relations(optimizedRoutes, ({ one }) => ({
+  batch: one(routeBatches, {
+    fields: [optimizedRoutes.batchId],
+    references: [routeBatches.id],
+  }),
+  zone: one(zones, {
+    fields: [optimizedRoutes.zoneId],
+    references: [zones.id],
+  }),
+  driver: one(drivers, {
+    fields: [optimizedRoutes.driverId],
+    references: [drivers.id],
   }),
 }));
 
@@ -237,6 +353,35 @@ export const updateOrderStatusSchema = z.object({
 });
 
 // Types
+// Zod schemas for validation
+export const insertClientSchema = createInsertSchema(clients).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertZoneSchema = createInsertSchema(zones).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRouteBatchSchema = createInsertSchema(routeBatches).omit({
+  id: true,
+  createdAt: true,
+  optimizedAt: true,
+});
+
+export const insertOptimizedRouteSchema = createInsertSchema(optimizedRoutes).omit({
+  id: true,
+  createdAt: true,
+  assignedAt: true,
+});
+
+export const voidOrderSchema = z.object({
+  reason: z.string().min(1, "Void reason is required"),
+});
+
+// Type definitions
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertDriver = z.infer<typeof insertDriverSchema>;
@@ -248,3 +393,14 @@ export type Customer = typeof customers.$inferSelect;
 export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type UpdateOrderStatus = z.infer<typeof updateOrderStatusSchema>;
+
+// New types for route optimization
+export type InsertClient = z.infer<typeof insertClientSchema>;
+export type Client = typeof clients.$inferSelect;
+export type InsertZone = z.infer<typeof insertZoneSchema>;
+export type Zone = typeof zones.$inferSelect;
+export type InsertRouteBatch = z.infer<typeof insertRouteBatchSchema>;
+export type RouteBatch = typeof routeBatches.$inferSelect;
+export type InsertOptimizedRoute = z.infer<typeof insertOptimizedRouteSchema>;
+export type OptimizedRoute = typeof optimizedRoutes.$inferSelect;
+export type VoidOrder = z.infer<typeof voidOrderSchema>;

@@ -101,8 +101,21 @@ The application follows a monorepo structure with shared code between client and
 - **Authentication**: `SESSION_SECRET`, `ISSUER_URL`, `REPL_ID` for OIDC
 - **Security**: Secure cookies and HTTPS in production
 
+## Recent Changes
+- June 30, 2025: Multi-tenant route optimization system implemented
+  - Added client management with role-based access control
+  - Implemented zone-based delivery system (A, B, C, D for North, South, East, West)
+  - Added 2:30 PM cutoff time for batch processing and route optimization
+  - Created super admin controls for managing clients, drivers, and zones
+  - Added void order functionality for client users
+  - Implemented optimized route planning with 300-mile radius zones
+  - Set base pickup point: 1049 Industrial Dr, Bensenville, IL 60106
+  - Added American Distributors LLC as first client with restricted access
+
 ## Changelog
-- June 30, 2025. Initial setup
+- June 30, 2025. Initial setup with basic logistics platform
+- June 30, 2025. Added shipping label generation and barcode scanning
+- June 30, 2025. Implemented multi-tenant route optimization system
 
 ## User Preferences
 

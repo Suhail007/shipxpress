@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import Orders from "@/pages/Orders";
 import Drivers from "@/pages/Drivers";
 import DriverApp from "@/pages/DriverApp";
+import SuperAdmin from "@/pages/SuperAdmin";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {

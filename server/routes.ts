@@ -299,6 +299,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Super Admin Routes
+  app.get('/api/super-admin/stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const stats = await storage.getSuperAdminStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching super admin stats:", error);
+      res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+
+  // Client Management Routes
+  app.get('/api/clients', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const clients = await storage.getAllClients();
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      res.status(500).json({ message: "Failed to fetch clients" });
+    }
+  });
+
+  app.post('/api/clients', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const client = await storage.createClient(req.body);
+      res.json(client);
+    } catch (error) {
+      console.error("Error creating client:", error);
+      res.status(500).json({ message: "Failed to create client" });
+    }
+  });
+
+  // Zone Management Routes
+  app.get('/api/zones', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const zones = await storage.getAllZones();
+      res.json(zones);
+    } catch (error) {
+      console.error("Error fetching zones:", error);
+      res.status(500).json({ message: "Failed to fetch zones" });
+    }
+  });
+
+  // Driver Zone Assignment
+  app.post('/api/drivers/:id/assign-zone', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const driverId = parseInt(req.params.id);
+      const { zoneId } = req.body;
+      
+      const driver = await storage.assignDriverToZone(driverId, zoneId);
+      res.json(driver);
+    } catch (error) {
+      console.error("Error assigning zone:", error);
+      res.status(500).json({ message: "Failed to assign zone" });
+    }
+  });
+
+  // Route Batch Management
+  app.get('/api/route-batches', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      // Return empty array for now - would implement proper batch fetching
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching batches:", error);
+      res.status(500).json({ message: "Failed to fetch batches" });
+    }
+  });
+
+  app.post('/api/route-batches', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (user?.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const batch = await storage.createRouteBatch(req.body);
+      res.json(batch);
+    } catch (error) {
+      console.error("Error creating batch:", error);
+      res.status(500).json({ message: "Failed to create batch" });
+    }
+  });
+
+  // Void Order Route
+  app.post('/api/orders/:id/void', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      // Only clients and super admins can void orders
+      if (!['client', 'super_admin'].includes(user?.role || '')) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const orderId = parseInt(req.params.id);
+      const order = await storage.voidOrder(orderId, req.body, userId);
+      
+      await storage.logActivity(
+        userId,
+        "ORDER_VOIDED",
+        `Order ${order.orderNumber} was voided`,
+        { orderId, reason: req.body.reason }
+      );
+      
+      res.json(order);
+    } catch (error) {
+      console.error("Error voiding order:", error);
+      res.status(500).json({ message: "Failed to void order" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
