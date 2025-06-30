@@ -274,7 +274,10 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
       );
 
       autocompleteRef.current.addListener('place_changed', () => {
+        console.log('Google Places: place_changed event fired');
         const place = autocompleteRef.current?.getPlace();
+        console.log('Google Places: selected place:', place);
+        
         if (place && place.address_components) {
           let street = '';
           let city = '';
@@ -296,20 +299,49 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
             }
           });
 
-          // Update form values and force re-render
+          // Update form values with proper options to trigger updates
           const streetAddress = street.trim();
-          form.setValue('deliveryLine1', streetAddress);
-          form.setValue('deliveryCity', city);
-          form.setValue('deliveryState', state); 
-          form.setValue('deliveryZip', zip);
+          console.log('Setting form values:', { streetAddress, city, state, zip });
+          
+          // Use setTimeout to ensure proper DOM updates
+          setTimeout(() => {
+            form.setValue('deliveryLine1', streetAddress, { 
+              shouldValidate: true, 
+              shouldDirty: true, 
+              shouldTouch: true 
+            });
+            form.setValue('deliveryCity', city, { 
+              shouldValidate: true, 
+              shouldDirty: true, 
+              shouldTouch: true 
+            });
+            form.setValue('deliveryState', state, { 
+              shouldValidate: true, 
+              shouldDirty: true, 
+              shouldTouch: true 
+            });
+            form.setValue('deliveryZip', zip, { 
+              shouldValidate: true, 
+              shouldDirty: true, 
+              shouldTouch: true 
+            });
 
-          // Update the input field value directly to show selected address
-          if (addressInputRef.current) {
-            addressInputRef.current.value = streetAddress;
-          }
+            // Force update the input field value and trigger React events
+            if (addressInputRef.current) {
+              const input = addressInputRef.current;
+              input.value = streetAddress;
+              
+              // Create and dispatch events to ensure React Hook Form detects changes
+              const inputEvent = new Event('input', { bubbles: true });
+              const changeEvent = new Event('change', { bubbles: true });
+              
+              input.dispatchEvent(inputEvent);
+              input.dispatchEvent(changeEvent);
+            }
 
-          // Trigger form validation
-          form.trigger(['deliveryLine1', 'deliveryCity', 'deliveryState', 'deliveryZip']);
+            // Force form to re-validate and update
+            form.trigger();
+          }, 50);
 
           // Calculate distance immediately if we have coordinates
           if (place.geometry && place.geometry.location) {
@@ -321,34 +353,6 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
               : place.geometry.location.lng;
             
             calculateRealTimeDistance(lat, lng);
-          }
-
-          // Calculate distance if we have coordinates
-          if (place.geometry && place.geometry.location) {
-            const destinationLat = typeof place.geometry.location.lat === 'function' 
-              ? place.geometry.location.lat() 
-              : place.geometry.location.lat;
-            const destinationLng = typeof place.geometry.location.lng === 'function' 
-              ? place.geometry.location.lng() 
-              : place.geometry.location.lng;
-            
-            if (clientLocation) {
-              const distance = calculateStraightLineDistance(
-                clientLocation.lat,
-                clientLocation.lng,
-                destinationLat,
-                destinationLng
-              );
-              setEstimatedDistance(Math.round(distance));
-            } else {
-              // Use default pickup location (Bensenville, IL)
-              const distance = calculateStraightLineDistance(
-                41.96, -87.93,
-                destinationLat,
-                destinationLng
-              );
-              setEstimatedDistance(Math.round(distance));
-            }
           }
 
           // Blur the input to dismiss the dropdown
