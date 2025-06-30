@@ -175,7 +175,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
   // Calculate total weight from packages in real-time
   useEffect(() => {
     const totalWeight = packages.reduce((sum, pkg) => {
-      return sum + (pkg?.weight || 0);
+      return sum + (Number(pkg?.weight) || 0);
     }, 0);
     
     const weightCost = totalWeight * 0.75;
@@ -229,37 +229,39 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current?.getPlace();
-        if (place && place.formatted_address) {
+        if (place && place.address_components) {
           let street = '';
           let city = '';
           let state = '';
           let zip = '';
 
-          if (place.address_components) {
-            place.address_components.forEach((component: any) => {
-              const types = component.types;
-              if (types.includes('street_number')) {
-                street = component.long_name + ' ';
-              } else if (types.includes('route')) {
-                street += component.long_name;
-              } else if (types.includes('locality')) {
-                city = component.long_name;
-              } else if (types.includes('administrative_area_level_1')) {
-                state = component.short_name;
-              } else if (types.includes('postal_code')) {
-                zip = component.long_name;
-              }
-            });
-          }
+          place.address_components.forEach((component: any) => {
+            const types = component.types;
+            if (types.includes('street_number')) {
+              street = component.long_name + ' ';
+            } else if (types.includes('route')) {
+              street += component.long_name;
+            } else if (types.includes('locality')) {
+              city = component.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+              state = component.short_name;
+            } else if (types.includes('postal_code')) {
+              zip = component.long_name;
+            }
+          });
+
+
 
           // Update form values immediately and trigger validation
-          form.setValue('deliveryLine1', street.trim(), { shouldValidate: true, shouldDirty: true });
-          form.setValue('deliveryCity', city, { shouldValidate: true, shouldDirty: true });
-          form.setValue('deliveryState', state, { shouldValidate: true, shouldDirty: true });
-          form.setValue('deliveryZip', zip, { shouldValidate: true, shouldDirty: true });
+          form.setValue('deliveryLine1', street.trim(), { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+          form.setValue('deliveryCity', city, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+          form.setValue('deliveryState', state, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+          form.setValue('deliveryZip', zip, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
 
-          // Force form re-render
-          form.trigger(['deliveryLine1', 'deliveryCity', 'deliveryState', 'deliveryZip']);
+          // Force form re-render and validation
+          setTimeout(() => {
+            form.trigger(['deliveryLine1', 'deliveryCity', 'deliveryState', 'deliveryZip']);
+          }, 0);
 
           // Calculate distance if we have coordinates
           if (place.geometry && place.geometry.location) {
@@ -277,10 +279,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                 destinationLat,
                 destinationLng
               );
-              setCostEstimate(prev => ({
-                ...prev,
-                distance: Math.round(distance)
-              }));
+              setEstimatedDistance(Math.round(distance));
             } else {
               // Use default pickup location (Bensenville, IL)
               const distance = calculateStraightLineDistance(
@@ -288,10 +287,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                 destinationLat,
                 destinationLng
               );
-              setCostEstimate(prev => ({
-                ...prev,
-                distance: Math.round(distance)
-              }));
+              setEstimatedDistance(Math.round(distance));
             }
           }
 
@@ -443,15 +439,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                         <FormControl>
                           <Input 
                             placeholder="Start typing address..." 
-                            value={field.value}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              // Reset autocomplete when user types manually
-                              if (autocompleteRef.current) {
-                                autocompleteRef.current.set('place', null);
-                              }
-                            }}
-                            onBlur={field.onBlur}
+                            {...field}
                             ref={addressInputRef}
                             className="h-8" 
                             autoComplete="off"
