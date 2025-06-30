@@ -40,9 +40,9 @@ export default function Sidebar() {
               const Icon = item.icon;
               return (
                 <Link key={item.name} href={item.href}>
-                  <a
+                  <div
                     className={cn(
-                      "flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors",
+                      "flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer",
                       item.current && "bg-primary-50 border-r-2 border-primary-600 text-primary-600"
                     )}
                   >
@@ -58,7 +58,7 @@ export default function Sidebar() {
                         5
                       </span>
                     )}
-                  </a>
+                  </div>
                 </Link>
               );
             })}
@@ -72,15 +72,15 @@ export default function Sidebar() {
               const Icon = item.icon;
               return (
                 <Link key={item.name} href={item.href}>
-                  <a
+                  <div
                     className={cn(
-                      "flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors",
+                      "flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer",
                       item.current && "bg-primary-50 border-r-2 border-primary-600 text-primary-600"
                     )}
                   >
                     <Icon className="h-5 w-5 mr-3" />
                     {item.name}
-                  </a>
+                  </div>
                 </Link>
               );
             })}

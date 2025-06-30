@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Eye, Route, Edit, Plus, Upload, Phone, MapPin, Clock } from "lucide-react";
 import CreateOrderModal from "./CreateOrderModal";
+import { Order, Driver } from "@shared/schema";
 
 interface OrdersTableProps {
   limit?: number;
@@ -20,15 +21,15 @@ interface OrdersTableProps {
 export default function OrdersTable({ limit, showFilters = true }: OrdersTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders = [], isLoading } = useQuery<Order[]>({
     queryKey: ["/api/orders", { status: statusFilter, search: searchQuery }],
   });
 
-  const { data: availableDrivers } = useQuery({
+  const { data: availableDrivers = [] } = useQuery<Driver[]>({
     queryKey: ["/api/drivers/available"],
   });
 
@@ -101,7 +102,7 @@ export default function OrdersTable({ limit, showFilters = true }: OrdersTablePr
     }
   };
 
-  const displayedOrders = limit ? orders?.slice(0, limit) : orders;
+  const displayedOrders = limit ? orders.slice(0, limit) : orders;
 
   return (
     <>
@@ -135,7 +136,7 @@ export default function OrdersTable({ limit, showFilters = true }: OrdersTablePr
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="assigned">Assigned</SelectItem>
                   <SelectItem value="picked">Picked</SelectItem>
@@ -254,7 +255,7 @@ export default function OrdersTable({ limit, showFilters = true }: OrdersTablePr
                                   <SelectValue placeholder="Assign" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {availableDrivers.map((driver: any) => (
+                                  {availableDrivers.map((driver: Driver) => (
                                     <SelectItem key={driver.id} value={driver.id.toString()}>
                                       Driver #{driver.id}
                                     </SelectItem>
@@ -313,7 +314,7 @@ export default function OrdersTable({ limit, showFilters = true }: OrdersTablePr
           {!limit && displayedOrders && displayedOrders.length > 0 && (
             <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                Showing 1 to {displayedOrders.length} of {orders?.length || 0} orders
+                Showing 1 to {displayedOrders.length} of {orders.length} orders
               </div>
               <div className="flex space-x-1">
                 <Button size="sm" variant="outline">Previous</Button>
