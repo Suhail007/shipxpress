@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,8 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Package } from "lucide-react";
+import { Plus, Trash2, Calculator } from "lucide-react";
 
 type CreateOrderForm = z.infer<typeof insertOrderSchema>;
 
@@ -45,6 +44,7 @@ const getTodayDate = () => {
 export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [costEstimate, setCostEstimate] = useState({ weight: 0, distance: 25, total: 0 });
 
   const form = useForm<CreateOrderForm>({
     resolver: zodResolver(insertOrderSchema),
@@ -78,6 +78,20 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     control: form.control,
     name: "packages"
   });
+
+  // Calculate cost in real-time
+  useEffect(() => {
+    const packages = form.watch("packages");
+    const totalWeight = packages?.reduce((sum, pkg) => sum + (pkg.weight || 0), 0) || 0;
+    const estimatedDistance = 25; // Default distance estimate
+    const total = (totalWeight * 0.75) + (estimatedDistance * 0.025);
+    
+    setCostEstimate({
+      weight: totalWeight,
+      distance: estimatedDistance,
+      total: total
+    });
+  }, [form.watch("packages")]);
 
   const createOrderMutation = useMutation({
     mutationFn: async (data: CreateOrderForm) => {
@@ -136,7 +150,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>
@@ -145,344 +159,336 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Customer Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Customer Information</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="customerName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Customer Name *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter customer name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="customerPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="+1 555-0123" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="customerEmail"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Email Address (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="customer@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Delivery Address */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Delivery Address</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="deliveryLine1"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address Line 1 *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Street address, P.O. box, company name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="deliveryLine2"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Address Line 2 (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Apartment, suite, unit, building, floor, etc." {...field} value={field.value || ""} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="h-full">
+            <div className="grid grid-cols-2 gap-6 h-[500px]">
+              {/* Left Side - Order Details */}
+              <div className="space-y-4 overflow-y-auto pr-2">
+                {/* Customer Section */}
+                <div className="space-y-3">
+                  <h3 className="font-medium text-sm border-b pb-1">Customer Details</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="customerName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Name *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Customer name" {...field} className="h-8" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customerPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Phone *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="555-0123" {...field} className="h-8" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormField
                     control={form.control}
-                    name="deliveryCity"
+                    name="customerEmail"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City *</FormLabel>
+                        <FormLabel className="text-xs">Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="City" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="deliveryState"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>State *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="State" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="deliveryZip"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ZIP Code *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="ZIP" {...field} />
+                          <Input placeholder="customer@email.com" {...field} className="h-8" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Pickup Date */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Pickup Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name="pickupDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Pickup Date *</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Package Information */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg flex items-center">
-                  <Package className="h-5 w-5 mr-2" />
-                  Package Details
-                </CardTitle>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addPackage}
-                  className="ml-2"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Package
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {fields.map((field, index) => (
-                  <div key={field.id} className="border rounded-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium">Package {index + 1}</h4>
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => remove(index)}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                {/* Delivery Address */}
+                <div className="space-y-3">
+                  <h3 className="font-medium text-sm border-b pb-1">Delivery Address</h3>
+                  <FormField
+                    control={form.control}
+                    name="deliveryLine1"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Address *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="123 Main St" {...field} className="h-8" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <FormField
+                      control={form.control}
+                      name="deliveryCity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">City *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Chicago" {...field} className="h-8" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="deliveryState"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">State *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="IL" {...field} className="h-8" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="deliveryZip"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">ZIP *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="60601" {...field} className="h-8" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                {/* Package Details */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-sm border-b pb-1">Package Details</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPackage}
+                      className="h-6 px-2 text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {fields.map((field, index) => (
+                      <div key={field.id} className="border rounded p-2 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium">Package {index + 1}</span>
+                          {fields.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => remove(index)}
+                              className="h-4 w-4 p-0"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-4 gap-1">
+                          <FormField
+                            control={form.control}
+                            name={`packages.${index}.type`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <SelectTrigger className="h-6 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="small_package">Small</SelectItem>
+                                      <SelectItem value="medium_package">Medium</SelectItem>
+                                      <SelectItem value="large_package">Large</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`packages.${index}.weight`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="lbs" 
+                                    type="number" 
+                                    {...field} 
+                                    className="h-6 text-xs"
+                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`packages.${index}.dimensions.length`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="L" 
+                                    type="number" 
+                                    {...field} 
+                                    className="h-6 text-xs"
+                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`packages.${index}.dimensions.width`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="W" 
+                                    type="number" 
+                                    {...field} 
+                                    className="h-6 text-xs"
+                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pickup Date */}
+                <div className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="pickupDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Pickup Date *</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} className="h-8" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Right Side - Cost Summary */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-4">
+                  <h3 className="font-medium text-lg flex items-center">
+                    <Calculator className="h-5 w-5 mr-2" />
+                    Cost Estimate
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-sm text-gray-600">Total Weight:</span>
+                      <span className="font-medium">{costEstimate.weight.toFixed(2)} lbs</span>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name={`packages.${index}.type`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Package Type *</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="documents">Documents</SelectItem>
-                                <SelectItem value="small_package">Small Package</SelectItem>
-                                <SelectItem value="medium_package">Medium Package</SelectItem>
-                                <SelectItem value="large_package">Large Package</SelectItem>
-                                <SelectItem value="fragile_items">Fragile Items</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`packages.${index}.weight`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Weight (lbs) *</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                step="0.1" 
-                                min="0.1"
-                                placeholder="1.0" 
-                                {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-sm text-gray-600">Estimated Distance:</span>
+                      <span className="font-medium">{costEstimate.distance} miles</span>
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-4">
-                      <FormField
-                        control={form.control}
-                        name={`packages.${index}.dimensions.length`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Length (in) *</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min="1"
-                                placeholder="10" 
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`packages.${index}.dimensions.width`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Width (in) *</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min="1"
-                                placeholder="10" 
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name={`packages.${index}.dimensions.height`}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Height (in) *</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                min="1"
-                                placeholder="10" 
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Weight Charge:</span>
+                        <span className="text-sm">${(costEstimate.weight * 0.75).toFixed(2)}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 ml-4">
+                        {costEstimate.weight.toFixed(2)} lbs × $0.75/lb
+                      </div>
+                      
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Distance Charge:</span>
+                        <span className="text-sm">${(costEstimate.distance * 0.025).toFixed(2)}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 ml-4">
+                        {costEstimate.distance} miles × $0.025/mile
+                      </div>
+                    </div>
+                    
+                    <div className="border-t pt-3">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-lg">Total Estimated Cost:</span>
+                        <span className="font-bold text-xl text-green-600">
+                          ${costEstimate.total.toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
 
-            {/* Special Instructions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Additional Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FormField
-                  control={form.control}
-                  name="specialInstructions"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Special Instructions (Optional)</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Any special handling instructions, delivery notes, etc..." 
-                          rows={3} 
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
+                  <div className="bg-blue-50 p-3 rounded text-sm">
+                    <p className="text-blue-800 font-medium mb-1">Pricing Information:</p>
+                    <p className="text-blue-700 text-xs">
+                      • Weight: $0.75 per pound<br/>
+                      • Distance: $0.025 per mile<br/>
+                      • Distance calculated after address verification
+                    </p>
+                  </div>
 
-            {/* Action Buttons */}
-            <div className="flex space-x-4 pt-4 border-t border-gray-200">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={createOrderMutation.isPending}
-                className="flex-1 bg-primary-600 hover:bg-primary-700"
-              >
-                {createOrderMutation.isPending ? "Creating..." : "Create Order"}
-              </Button>
+                  <FormField
+                    control={form.control}
+                    name="specialInstructions"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Special Instructions</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Any special delivery instructions..." 
+                            {...field} 
+                            className="min-h-16 text-xs"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="space-y-2 pt-4">
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={createOrderMutation.isPending}
+                    >
+                      {createOrderMutation.isPending ? "Creating..." : `Create Order - $${costEstimate.total.toFixed(2)}`}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => onOpenChange(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </form>
         </Form>
