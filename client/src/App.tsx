@@ -26,18 +26,45 @@ function Router() {
     );
   }
 
+  if (!isAuthenticated) {
+    return <Route path="/" component={Landing} />;
+  }
+
+  // Role-based routing
+  if (user?.role === "super_admin") {
+    return (
+      <Switch>
+        <Route path="/" component={SuperAdmin} />
+        <Route path="/dashboard" component={Dashboard} />
+        <Route path="/orders" component={Orders} />
+        <Route path="/drivers" component={Drivers} />
+        <Route path="/driver-app" component={DriverApp} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+
+  if (user?.role === "driver") {
+    return <Route path="/" component={DriverApp} />;
+  }
+
+  if (user?.role === "client") {
+    return (
+      <Switch>
+        <Route path="/" component={Orders} />
+        <Route path="/orders" component={Orders} />
+        <Route component={NotFound} />
+      </Switch>
+    );
+  }
+
+  // Default admin interface
   return (
     <Switch>
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/orders" component={Orders} />
-          <Route path="/drivers" component={Drivers} />
-          <Route path="/driver-app" component={DriverApp} />
-        </>
-      )}
+      <Route path="/" component={Dashboard} />
+      <Route path="/orders" component={Orders} />
+      <Route path="/drivers" component={Drivers} />
+      <Route path="/driver-app" component={DriverApp} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -111,6 +111,9 @@ The application follows a monorepo structure with shared code between client and
   - Implemented optimized route planning with 300-mile radius zones
   - Set base pickup point: 1049 Industrial Dr, Bensenville, IL 60106
   - Added American Distributors LLC as first client with restricted access
+  - Fixed role-based routing in App.tsx for proper super admin interface access
+  - Added sample clients (American Distributors LLC, Midwest Supply Co, Great Lakes Logistics)
+  - Created 4 delivery zones (North, South, East, West) with 300-mile radius
 
 ## Changelog
 - June 30, 2025. Initial setup with basic logistics platform
