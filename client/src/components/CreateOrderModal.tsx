@@ -250,18 +250,14 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
             }
           });
 
+          // Update form values using React Hook Form's proper methods
+          form.setValue('deliveryLine1', street.trim());
+          form.setValue('deliveryCity', city);
+          form.setValue('deliveryState', state); 
+          form.setValue('deliveryZip', zip);
 
-
-          // Update form values immediately and trigger validation
-          form.setValue('deliveryLine1', street.trim(), { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-          form.setValue('deliveryCity', city, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-          form.setValue('deliveryState', state, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-          form.setValue('deliveryZip', zip, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-
-          // Force form re-render and validation
-          setTimeout(() => {
-            form.trigger(['deliveryLine1', 'deliveryCity', 'deliveryState', 'deliveryZip']);
-          }, 0);
+          // Mark fields as touched and dirty
+          form.trigger(['deliveryLine1', 'deliveryCity', 'deliveryState', 'deliveryZip']);
 
           // Calculate distance if we have coordinates
           if (place.geometry && place.geometry.location) {
@@ -439,7 +435,15 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                         <FormControl>
                           <Input 
                             placeholder="Start typing address..." 
-                            {...field}
+                            value={field.value}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              // Clear autocomplete selection when user types manually
+                              if (autocompleteRef.current) {
+                                autocompleteRef.current.set('place', null);
+                              }
+                            }}
+                            onBlur={field.onBlur}
                             ref={addressInputRef}
                             className="h-8" 
                             autoComplete="off"
