@@ -81,6 +81,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, search } = req.query;
       const user = req.user.claims;
       
+      console.log(`[DEBUG] Orders API called - User: ${user.sub}, Status filter: ${status}, Search: ${search}`);
+      
       let orders;
       if (user.role === "driver") {
         const driver = await storage.getDriverByUserId(user.sub);
@@ -91,12 +93,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (user.sub.startsWith('client_')) {
         // Client impersonation - get orders for specific client
         const clientId = parseInt(user.sub.replace('client_', ''));
+        console.log(`[DEBUG] Getting orders for client ${clientId} with filters:`, { status, search });
         orders = await storage.getOrdersForClient(clientId, { status, search });
       } else {
         // Super admin - get all orders
         orders = await storage.getAllOrders({ status, search });
       }
       
+      console.log(`[DEBUG] Returned ${orders.length} orders`);
       res.json(orders);
     } catch (error) {
       console.error("Error fetching orders:", error);
