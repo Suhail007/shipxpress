@@ -18,17 +18,21 @@ import { Order, Driver } from "@shared/schema";
 interface OrdersTableProps {
   limit?: number;
   showFilters?: boolean;
+  statusFilter?: string;
 }
 
-export default function OrdersTable({ limit, showFilters = true }: OrdersTableProps) {
+export default function OrdersTable({ limit, showFilters = true, statusFilter: propStatusFilter }: OrdersTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState(propStatusFilter || "all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Use propStatusFilter if provided, otherwise use local state
+  const activeStatusFilter = propStatusFilter || statusFilter;
+
   const { data: orders = [], isLoading } = useQuery<Order[]>({
-    queryKey: ["/api/orders", { status: statusFilter, search: searchQuery }],
+    queryKey: ["/api/orders", { status: activeStatusFilter, search: searchQuery }],
   });
 
   const { data: availableDrivers = [] } = useQuery<Driver[]>({
@@ -174,20 +178,23 @@ export default function OrdersTable({ limit, showFilters = true }: OrdersTablePr
           
           {showFilters && (
             <div className="flex space-x-2 mt-4">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="assigned">Assigned</SelectItem>
-                  <SelectItem value="picked">Picked</SelectItem>
-                  <SelectItem value="in_transit">In Transit</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
-                </SelectContent>
-              </Select>
+              {!propStatusFilter && (
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="All Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="assigned">Assigned</SelectItem>
+                    <SelectItem value="picked">Picked</SelectItem>
+                    <SelectItem value="in_transit">In Transit</SelectItem>
+                    <SelectItem value="delivered">Delivered</SelectItem>
+                    <SelectItem value="failed">Failed</SelectItem>
+                    <SelectItem value="void">Void</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
               <Input
                 type="date"
                 className="w-40"
@@ -353,17 +360,21 @@ export default function OrdersTable({ limit, showFilters = true }: OrdersTablePr
                                 <Printer className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                              <DialogHeader>
-                                <DialogTitle>Shipping Labels - {order.orderNumber}</DialogTitle>
+                            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-6">
+                              <DialogHeader className="mb-6">
+                                <DialogTitle className="text-xl">Shipping Labels - {order.orderNumber}</DialogTitle>
                               </DialogHeader>
-                              <div className="space-y-4">
+                              <div className="space-y-8">
                                 {order.packages?.map((pkg: any, index: number) => (
-                                  <div key={index}>
-                                    <h3 className="font-medium mb-2">Package {index + 1} of {order.packages.length}</h3>
-                                    <ShippingLabel 
-                                      order={{...order, currentPackage: index + 1, totalPackages: order.packages.length, packageDetails: pkg}} 
-                                    />
+                                  <div key={index} className="border-b border-gray-200 pb-6 last:border-b-0">
+                                    <h3 className="font-semibold text-lg mb-4 text-gray-800">
+                                      Package {index + 1} of {order.packages.length}
+                                    </h3>
+                                    <div className="flex justify-center">
+                                      <ShippingLabel 
+                                        order={{...order, currentPackage: index + 1, totalPackages: order.packages.length, packageDetails: pkg}} 
+                                      />
+                                    </div>
                                   </div>
                                 ))}
                               </div>

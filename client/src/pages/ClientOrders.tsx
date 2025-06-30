@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import OrdersTable from "@/components/OrdersTable";
 import CreateOrderModal from "@/components/CreateOrderModal";
-import { Package, AlertCircle, LogOut, DollarSign, FileText } from "lucide-react";
+import { Package, AlertCircle, LogOut, DollarSign, FileText, X, Check, Printer } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -18,7 +18,7 @@ export default function ClientOrders() {
   const isImpersonated = user?.id?.startsWith('client_');
 
   // Fetch orders for billing calculations
-  const { data: orders = [] } = useQuery({
+  const { data: orders = [] } = useQuery<any[]>({
     queryKey: ['/api/orders'],
   });
 
@@ -54,6 +54,50 @@ export default function ClientOrders() {
   };
 
   const billingData = calculateBilling();
+
+  // Print all delivered orders labels
+  const handlePrintAllLabels = () => {
+    const ordersArray = Array.isArray(orders) ? orders : [];
+    const deliveredOrders = ordersArray.filter((order: any) => order.status === 'delivered');
+    
+    if (deliveredOrders.length === 0) {
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>All Shipping Labels - ${deliveredOrders.length} Orders</title>
+            <style>
+              body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+              .page-break { page-break-after: always; }
+              .label-container { margin: 20px; display: flex; justify-content: center; }
+              @media print {
+                body { margin: 0; padding: 0; }
+                .page-break:last-child { page-break-after: avoid; }
+              }
+            </style>
+          </head>
+          <body>
+            ${deliveredOrders.map((order: any, index: number) => `
+              <div class="label-container ${index < deliveredOrders.length - 1 ? 'page-break' : ''}">
+                <div style="text-align: center;">
+                  <h2>Order: ${order.orderNumber}</h2>
+                  <p>Customer: ${order.customerName}</p>
+                  <p>Address: ${order.deliveryLine1}, ${order.deliveryCity}, ${order.deliveryState} ${order.deliveryZip}</p>
+                  <p>Weight: ${order.weight || 0} lbs | Distance: ${order.distance || 0} mi</p>
+                </div>
+              </div>
+            `).join('')}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -108,11 +152,19 @@ export default function ClientOrders() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="orders" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="orders" className="flex items-center space-x-2">
+        <Tabs defaultValue="pending" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="pending" className="flex items-center space-x-2">
               <Package className="h-4 w-4" />
-              <span>Orders</span>
+              <span>Pending</span>
+            </TabsTrigger>
+            <TabsTrigger value="void" className="flex items-center space-x-2">
+              <X className="h-4 w-4" />
+              <span>Void</span>
+            </TabsTrigger>
+            <TabsTrigger value="delivered" className="flex items-center space-x-2">
+              <Check className="h-4 w-4" />
+              <span>Delivered</span>
             </TabsTrigger>
             <TabsTrigger value="billing" className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4" />
@@ -120,8 +172,8 @@ export default function ClientOrders() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Orders Tab */}
-          <TabsContent value="orders" className="space-y-6">
+          {/* Pending Orders Tab */}
+          <TabsContent value="pending" className="space-y-6">
             {/* Quick Actions */}
             <Card>
               <CardHeader>
@@ -144,16 +196,56 @@ export default function ClientOrders() {
               </CardContent>
             </Card>
 
-            {/* Orders Table */}
+            {/* Pending Orders Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Orders</CardTitle>
+                <CardTitle>Pending Orders</CardTitle>
                 <CardDescription>
-                  All your delivery orders in one place
+                  Orders awaiting pickup or processing
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <OrdersTable showFilters={true} />
+                <OrdersTable showFilters={true} statusFilter="pending" />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Void Orders Tab */}
+          <TabsContent value="void" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Void Orders</CardTitle>
+                <CardDescription>
+                  Orders that have been voided or cancelled
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <OrdersTable showFilters={true} statusFilter="void" />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Delivered Orders Tab */}
+          <TabsContent value="delivered" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Delivered Orders</CardTitle>
+                  <CardDescription>
+                    Successfully completed deliveries
+                  </CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="flex items-center space-x-2"
+                  onClick={handlePrintAllLabels}
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print All Labels</span>
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                <OrdersTable showFilters={true} statusFilter="delivered" />
               </CardContent>
             </Card>
           </TabsContent>
