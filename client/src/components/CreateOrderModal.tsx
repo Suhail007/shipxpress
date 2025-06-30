@@ -61,7 +61,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
       pickupDate: getTodayDate(),
       packages: [
         {
-          type: "small_package",
+          type: "package",
           weight: 1,
           dimensions: {
             length: 10,
@@ -138,7 +138,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
   const addPackage = () => {
     append({
-      type: "small_package",
+      type: "package",
       weight: 1,
       dimensions: {
         length: 10,
@@ -150,7 +150,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[80vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>
@@ -160,7 +160,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="h-full">
-            <div className="grid grid-cols-2 gap-6 h-[500px]">
+            <div className="grid grid-cols-2 gap-6 h-[450px]">
               {/* Left Side - Order Details */}
               <div className="space-y-4 overflow-y-auto pr-2">
                 {/* Customer Section */}
@@ -283,7 +283,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                       Add
                     </Button>
                   </div>
-                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                  <div className="space-y-2 max-h-36 overflow-y-auto">
                     {fields.map((field, index) => (
                       <div key={field.id} className="border rounded p-2 space-y-2">
                         <div className="flex items-center justify-between">
@@ -300,38 +300,20 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                             </Button>
                           )}
                         </div>
-                        <div className="grid grid-cols-4 gap-1">
-                          <FormField
-                            control={form.control}
-                            name={`packages.${index}.type`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <SelectTrigger className="h-6 text-xs">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="small_package">Small</SelectItem>
-                                      <SelectItem value="medium_package">Medium</SelectItem>
-                                      <SelectItem value="large_package">Large</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
+                        <div className="grid grid-cols-4 gap-2">
                           <FormField
                             control={form.control}
                             name={`packages.${index}.weight`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Weight (lbs)</FormLabel>
                                 <FormControl>
                                   <Input 
-                                    placeholder="lbs" 
+                                    placeholder="0" 
                                     type="number" 
+                                    step="0.1"
                                     {...field} 
-                                    className="h-6 text-xs"
+                                    className="h-8 text-sm"
                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                   />
                                 </FormControl>
@@ -343,12 +325,13 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                             name={`packages.${index}.dimensions.length`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Length</FormLabel>
                                 <FormControl>
                                   <Input 
-                                    placeholder="L" 
+                                    placeholder="0" 
                                     type="number" 
                                     {...field} 
-                                    className="h-6 text-xs"
+                                    className="h-8 text-sm"
                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                   />
                                 </FormControl>
@@ -360,12 +343,31 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                             name={`packages.${index}.dimensions.width`}
                             render={({ field }) => (
                               <FormItem>
+                                <FormLabel className="text-xs">Width</FormLabel>
                                 <FormControl>
                                   <Input 
-                                    placeholder="W" 
+                                    placeholder="0" 
                                     type="number" 
                                     {...field} 
-                                    className="h-6 text-xs"
+                                    className="h-8 text-sm"
+                                    onChange={(e) => field.onChange(Number(e.target.value))}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`packages.${index}.dimensions.height`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Height</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    placeholder="0" 
+                                    type="number" 
+                                    {...field} 
+                                    className="h-8 text-sm"
                                     onChange={(e) => field.onChange(Number(e.target.value))}
                                   />
                                 </FormControl>
