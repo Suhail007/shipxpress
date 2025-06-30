@@ -493,18 +493,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientId: client.id,
       });
       
-      // Update the session to impersonate the client
-      req.user = {
+      // Update the passport session to impersonate the client
+      const impersonationUser = {
         claims: {
           sub: user.id,
           email: user.email,
           first_name: user.firstName,
           last_name: user.lastName,
           profile_image_url: user.profileImageUrl,
-        }
+        },
+        access_token: 'impersonated',
+        refresh_token: 'impersonated',
+        expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour
       };
-      
-      res.json({ message: 'Client impersonation successful', user });
+
+      // Update both req.user and the session
+      req.user = impersonationUser;
+      req.session.passport = { user: impersonationUser };
+
+      // Save the session data
+      req.session.save((err: any) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ message: 'Session update failed' });
+        }
+        res.json({ message: 'Client impersonation successful', user });
+      });
     } catch (error) {
       console.error('Client impersonation error:', error);
       res.status(500).json({ message: 'Internal server error' });

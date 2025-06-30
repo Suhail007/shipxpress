@@ -282,18 +282,21 @@ export default function SuperAdmin() {
 
   const handleLoginAsClient = async (clientId: number) => {
     try {
-      const response = await apiRequest(`/api/impersonate-client/${clientId}`, {
+      await apiRequest(`/api/impersonate-client/${clientId}`, {
         method: 'POST',
       });
       
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Logged in as client successfully",
-        });
-        // Refresh the page to update user context
-        window.location.reload();
-      }
+      toast({
+        title: "Success",
+        description: "Switching to client view...",
+      });
+      
+      // Clear the query cache and redirect to force re-authentication
+      queryClient.clear();
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
+      
     } catch (error) {
       toast({
         title: "Error",
