@@ -426,6 +426,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client Login Route
+  app.post('/api/client/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password required' });
+      }
+      
+      const client = await storage.getClientByCredentials(username, password);
+      if (!client) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+      
+      // Create a user session for the client
+      const user = await storage.upsertUser({
+        id: `client_${client.id}`,
+        email: client.contactEmail,
+        firstName: client.name.split(' ')[0],
+        lastName: client.name.split(' ').slice(1).join(' '),
+        profileImageUrl: null,
+        role: 'client',
+        clientId: client.id,
+      });
+      
+      // Set up session similar to OAuth flow
+      req.login({ claims: { sub: user.id }, client }, (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Session error' });
+        }
+        res.json({ user, client });
+      });
+      
+    } catch (error) {
+      console.error("Error logging in client:", error);
+      res.status(500).json({ message: "Failed to login" });
+    }
+  });
+
   // Void Order Route
   app.post('/api/orders/:id/void', isAuthenticated, async (req: any, res) => {
     try {

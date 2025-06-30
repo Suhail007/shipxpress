@@ -10,6 +10,7 @@ import Orders from "@/pages/Orders";
 import Drivers from "@/pages/Drivers";
 import DriverApp from "@/pages/DriverApp";
 import SuperAdmin from "@/pages/SuperAdmin";
+import ClientLogin from "@/pages/ClientLogin";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -58,13 +59,14 @@ function Router() {
     );
   }
 
-  // Default admin interface
+  // Default admin interface with client login option
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/orders" component={Orders} />
       <Route path="/drivers" component={Drivers} />
       <Route path="/driver-app" component={DriverApp} />
+      <Route path="/client-login" component={ClientLogin} />
       <Route component={NotFound} />
     </Switch>
   );

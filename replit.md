@@ -114,6 +114,10 @@ The application follows a monorepo structure with shared code between client and
   - Fixed role-based routing in App.tsx for proper super admin interface access
   - Added sample clients (American Distributors LLC, Midwest Supply Co, Great Lakes Logistics)
   - Created 4 delivery zones (North, South, East, West) with 300-mile radius
+  - Implemented client login system with credentials (american_dist/password123)
+  - Added Client Login page accessible from landing page
+  - Super admin dashboard shows all clients, drivers, zones, and route batches
+  - Complete role-based access: super_admin → full dashboard, client → orders only, driver → mobile app
 
 ## Changelog
 - June 30, 2025. Initial setup with basic logistics platform

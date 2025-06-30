@@ -35,8 +35,12 @@ export default function Landing() {
           >
             Get Started
           </Button>
-          <Button size="lg" variant="outline">
-            Learn More
+          <Button 
+            size="lg" 
+            variant="outline"
+            onClick={() => window.location.href = "/client-login"}
+          >
+            Client Login
           </Button>
         </div>
       </section>

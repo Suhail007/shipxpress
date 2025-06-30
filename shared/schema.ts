@@ -142,6 +142,8 @@ export const clients = pgTable("clients", {
   address: text("address").notNull(),
   contactEmail: varchar("contact_email"),
   contactPhone: varchar("contact_phone"),
+  loginUsername: varchar("login_username").unique(),
+  loginPassword: varchar("login_password"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
