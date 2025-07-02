@@ -12,7 +12,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const sessionUser = req.user;
+      
+      // Handle client sessions
+      if (sessionUser.client) {
+        const userId = sessionUser.claims.sub;
+        const user = await storage.getUser(userId);
+        return res.json({ ...user, client: sessionUser.client });
+      }
+      
+      // Handle OAuth sessions
+      const userId = sessionUser.claims.sub;
       const user = await storage.getUser(userId);
       
       // Get driver info if user is a driver
@@ -512,11 +522,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Set up session similar to OAuth flow
-      req.login({ claims: { sub: user.id }, client }, (err) => {
+      const sessionUser = { claims: { sub: user.id }, client };
+      req.login(sessionUser, (err) => {
         if (err) {
+          console.error('Session error:', err);
           return res.status(500).json({ message: 'Session error' });
         }
-        res.json({ user, client });
+        
+        // Store user in session
+        req.session.passport = { user: sessionUser };
+        req.session.save(() => {
+          res.json({ user, client });
+        });
       });
       
     } catch (error) {

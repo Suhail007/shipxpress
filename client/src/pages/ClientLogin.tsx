@@ -44,7 +44,11 @@ export default function ClientLogin() {
         description: `Welcome back, ${data.client.name}!`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      // Redirect will be handled by the App component
+      
+      // Force a page reload to refresh the authentication state
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
     },
     onError: (error) => {
       toast({
