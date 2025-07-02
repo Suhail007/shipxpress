@@ -48,6 +48,12 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
   const [costEstimate, setCostEstimate] = useState({ weight: 0, distance: 25, total: 0 });
   const [clientLocation, setClientLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [addressValidation, setAddressValidation] = useState({
+    isValid: false,
+    isValidating: false,
+    error: '',
+    suggestion: ''
+  });
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
 
@@ -174,6 +180,166 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
   const deliveryState = watchedValues.deliveryState || "";
   const deliveryZip = watchedValues.deliveryZip || "";
 
+  // Helper function to provide friendly error messages for incomplete addresses
+  const getIncompleteAddressMessage = useCallback((address: string, city: string, state: string, zip: string) => {
+    const missing = [];
+    if (!address.trim()) missing.push('street address');
+    if (!city.trim()) missing.push('city');
+    if (!state.trim()) missing.push('state');
+    
+    if (missing.length > 0) {
+      return {
+        error: `Please enter the ${missing.join(', ')} to validate this address.`,
+        suggestion: 'Complete address helps ensure accurate delivery.'
+      };
+    }
+    
+    if (!zip.trim()) {
+      return {
+        error: '',
+        suggestion: 'Adding a ZIP code improves address accuracy.'
+      };
+    }
+    
+    return { error: '', suggestion: '' };
+  }, []);
+
+  // Real-time address validation function
+  const validateAddressInRealTime = useCallback(async (address: string, city: string, state: string, zip: string) => {
+    // Check for incomplete addresses first
+    const incompleteCheck = getIncompleteAddressMessage(address, city, state, zip);
+    if (incompleteCheck.error) {
+      setAddressValidation({
+        isValid: false,
+        isValidating: false,
+        error: incompleteCheck.error,
+        suggestion: incompleteCheck.suggestion
+      });
+      return;
+    }
+
+    if (!address || !city || !state) {
+      setAddressValidation({
+        isValid: false,
+        isValidating: false,
+        error: '',
+        suggestion: incompleteCheck.suggestion
+      });
+      return;
+    }
+
+    setAddressValidation(prev => ({ ...prev, isValidating: true, error: '' }));
+
+    try {
+      const fullAddress = `${address}, ${city}, ${state} ${zip || ''}`.trim();
+      
+      // Use Google Geocoding API for validation
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        setAddressValidation({
+          isValid: false,
+          isValidating: false,
+          error: 'Address validation temporarily unavailable',
+          suggestion: ''
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${apiKey}`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Validation service unavailable');
+      }
+
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        const result = data.results[0];
+        const isExactMatch = result.types.includes('street_address') || result.types.includes('premise');
+        const isSubpremise = result.types.includes('subpremise');
+        const isRoute = result.types.includes('route');
+        const isNeighborhood = result.types.includes('neighborhood');
+        
+        if (isExactMatch || isSubpremise) {
+          setAddressValidation({
+            isValid: true,
+            isValidating: false,
+            error: '',
+            suggestion: ''
+          });
+        } else if (isRoute) {
+          setAddressValidation({
+            isValid: false,
+            isValidating: false,
+            error: 'Please include a house or building number',
+            suggestion: `Try: [Number] ${result.formatted_address}`
+          });
+        } else if (isNeighborhood) {
+          setAddressValidation({
+            isValid: false,
+            isValidating: false,
+            error: 'Address is too general - needs a specific street address',
+            suggestion: 'Include the complete street address for accurate delivery.'
+          });
+        } else {
+          // For other types like establishment, locality, etc.
+          const partialMatch = result.partial_match;
+          setAddressValidation({
+            isValid: false,
+            isValidating: false,
+            error: partialMatch ? 'Address partially found - please verify' : 'Address could be more specific',
+            suggestion: `Suggested: ${result.formatted_address}`
+          });
+        }
+      } else if (data.status === 'ZERO_RESULTS') {
+        setAddressValidation({
+          isValid: false,
+          isValidating: false,
+          error: 'Address not found. Please check the spelling and try again.',
+          suggestion: 'Verify the street name, city, and state are correct.'
+        });
+      } else if (data.status === 'REQUEST_DENIED') {
+        setAddressValidation({
+          isValid: false,
+          isValidating: false,
+          error: 'Address validation service temporarily unavailable',
+          suggestion: 'Please verify the address manually.'
+        });
+      } else {
+        setAddressValidation({
+          isValid: false,
+          isValidating: false,
+          error: 'Unable to verify this address',
+          suggestion: 'Please double-check the address details.'
+        });
+      }
+    } catch (error) {
+      console.warn('Address validation error:', error);
+      setAddressValidation({
+        isValid: false,
+        isValidating: false,
+        error: 'Address validation temporarily unavailable',
+        suggestion: ''
+      });
+    }
+  }, []);
+
+  // Debounced address validation
+  const debouncedValidateAddress = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return (address: string, city: string, state: string, zip: string) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          validateAddressInRealTime(address, city, state, zip);
+        }, 800); // Wait 800ms after user stops typing
+      };
+    })(),
+    [validateAddressInRealTime]
+  );
+
   // Real-time distance calculation using Google Maps Distance Matrix API
   const calculateRealTimeDistance = useCallback(async (destinationLat: number, destinationLng: number) => {
     try {
@@ -244,6 +410,13 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
         });
     }
   }, [deliveryAddress, deliveryCity, deliveryState, deliveryZip, calculateDistance]);
+
+  // Trigger real-time address validation when address fields change
+  useEffect(() => {
+    if (deliveryAddress || deliveryCity || deliveryState || deliveryZip) {
+      debouncedValidateAddress(deliveryAddress, deliveryCity, deliveryState, deliveryZip);
+    }
+  }, [deliveryAddress, deliveryCity, deliveryState, deliveryZip, debouncedValidateAddress]);
 
   // Load Google Maps script and initialize autocomplete
   useEffect(() => {
@@ -574,7 +747,15 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                     name="deliveryLine1"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-xs">Address *</FormLabel>
+                        <FormLabel className="text-xs flex items-center gap-2">
+                          Address *
+                          {addressValidation.isValidating && (
+                            <div className="h-3 w-3 border border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                          )}
+                          {addressValidation.isValid && !addressValidation.isValidating && (
+                            <span className="text-green-600 text-xs">✓ Valid</span>
+                          )}
+                        </FormLabel>
                         <FormControl>
                           <Input 
                             placeholder="Start typing address..." 
@@ -588,11 +769,22 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                             }}
                             onBlur={field.onBlur}
                             ref={addressInputRef}
-                            className="h-8" 
+                            className={`h-8 ${
+                              addressValidation.error ? 'border-red-500 focus:border-red-500' : 
+                              addressValidation.isValid ? 'border-green-500 focus:border-green-500' : ''
+                            }`}
                             autoComplete="off"
                           />
                         </FormControl>
                         <FormMessage />
+                        {addressValidation.error && (
+                          <div className="text-xs text-red-600 mt-1">
+                            <p>{addressValidation.error}</p>
+                            {addressValidation.suggestion && (
+                              <p className="text-gray-600 italic">{addressValidation.suggestion}</p>
+                            )}
+                          </div>
+                        )}
                       </FormItem>
                     )}
                   />
@@ -637,6 +829,50 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                       )}
                     />
                   </div>
+                  
+                  {/* Address Validation Summary */}
+                  {(deliveryAddress || deliveryCity || deliveryState) && (
+                    <div className={`p-3 rounded-lg border-l-4 ${
+                      addressValidation.isValid 
+                        ? 'bg-green-50 border-green-500' 
+                        : addressValidation.error 
+                        ? 'bg-red-50 border-red-500' 
+                        : 'bg-yellow-50 border-yellow-500'
+                    }`}>
+                      <div className="flex items-start gap-2">
+                        {addressValidation.isValidating ? (
+                          <div className="h-4 w-4 border border-orange-500 border-t-transparent rounded-full animate-spin mt-0.5"></div>
+                        ) : addressValidation.isValid ? (
+                          <span className="text-green-600 text-sm mt-0.5">✓</span>
+                        ) : addressValidation.error ? (
+                          <span className="text-red-600 text-sm mt-0.5">⚠</span>
+                        ) : (
+                          <span className="text-yellow-600 text-sm mt-0.5">?</span>
+                        )}
+                        <div className="flex-1">
+                          <p className={`text-xs font-medium ${
+                            addressValidation.isValid 
+                              ? 'text-green-800' 
+                              : addressValidation.error 
+                              ? 'text-red-800' 
+                              : 'text-yellow-800'
+                          }`}>
+                            {addressValidation.isValidating 
+                              ? 'Validating address...' 
+                              : addressValidation.isValid 
+                              ? 'Address verified and ready for delivery' 
+                              : addressValidation.error 
+                              ? 'Address needs attention' 
+                              : 'Enter complete address for validation'
+                            }
+                          </p>
+                          {addressValidation.suggestion && (
+                            <p className="text-xs text-gray-600 mt-1">{addressValidation.suggestion}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Package Details */}
