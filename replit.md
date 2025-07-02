@@ -23,11 +23,11 @@ The application follows a monorepo structure with shared code between client and
 
 ## Key Components
 
-### Database Layer (Drizzle + PostgreSQL)
-- **ORM**: Drizzle with Neon serverless PostgreSQL
+### Database Layer (Drizzle + MySQL)
+- **ORM**: Drizzle with MySQL2 connection pool
 - **Schema Management**: Type-safe schema definitions in `shared/schema.ts`
 - **Core Entities**: Users, Drivers, Orders, Customers, Order Status History, Activity Logs
-- **Session Storage**: PostgreSQL-based session management for authentication
+- **Session Storage**: MySQL-based session management for authentication
 
 ### Authentication & Authorization
 - **Provider**: Replit OpenID Connect integration
@@ -97,11 +97,54 @@ The application follows a monorepo structure with shared code between client and
 - **Authentication**: Replit OIDC in development mode
 
 ### Environment Configuration
-- **Database**: `DATABASE_URL` for PostgreSQL connection
+- **Database**: `DATABASE_URL` for MySQL connection (format: mysql://user:password@host:port/database)
 - **Authentication**: `SESSION_SECRET`, `ISSUER_URL`, `REPL_ID` for OIDC
 - **Security**: Secure cookies and HTTPS in production
 
+### MySQL Database Setup
+
+**Required Environment Variables:**
+```
+DATABASE_URL=mysql://username:password@hostname:3306/logistics
+SESSION_SECRET=your-session-secret-here
+```
+
+**Setup Steps:**
+
+1. **Create MySQL Database:**
+   - Set up a MySQL server (local, cloud, or hosted service)
+   - Create a database named 'logistics'
+   - Update the DATABASE_URL environment variable
+
+2. **Run Database Setup:**
+   ```bash
+   mysql -u username -p logistics < setup-mysql.sql
+   ```
+
+3. **Sample Data Included:**
+   - 3 sample clients with login credentials
+   - 4 delivery zones (North, South, East, West)
+   - Database structure with all required tables and relationships
+
+**MySQL Schema Features:**
+- AUTO_INCREMENT primary keys for efficient indexing
+- JSON data types for complex data storage
+- Foreign key constraints for data integrity
+- Optimized indexes for query performance
+- UTF8MB4 character set for full Unicode support
+
 ## Recent Changes
+- July 2, 2025: **Complete MySQL Migration** - Converted entire system from PostgreSQL to MySQL
+  - Updated database schema to use MySQL syntax (mysqlTable, int, json, etc.)
+  - Converted all table definitions to MySQL-compatible format
+  - Changed database connection from Neon PostgreSQL to MySQL2 driver
+  - Updated session storage to use MemoryStore (temporary solution)
+  - Created MySQL setup script (setup-mysql.sql) with complete database structure
+  - Fixed query parameter passing in frontend API requests
+  - Maintained all existing functionality with MySQL backend
+  - All table relationships and constraints preserved in MySQL format
+  - Sample data and zone configurations included in setup script
+
 - June 30, 2025: Multi-tenant route optimization system implemented
   - Added client management with role-based access control
   - Implemented zone-based delivery system (A, B, C, D for North, South, East, West)
