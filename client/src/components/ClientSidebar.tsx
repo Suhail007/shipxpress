@@ -166,29 +166,7 @@ export default function ClientSidebar({ className }: ClientSidebarProps) {
         ))}
       </div>
 
-      {/* Quick Actions */}
-      {!collapsed && (
-        <div className="p-4 border-t border-white/10">
-          <div className="space-y-2">
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="w-full justify-start bg-shippxpress-orange hover:bg-shippxpress-orange/90 text-white border-none"
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Create Order
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full justify-start border-white/20 text-white hover:bg-white/10"
-            >
-              <MapPin className="h-4 w-4 mr-2" />
-              Track Package
-            </Button>
-          </div>
-        </div>
-      )}
+
 
       {/* Footer */}
       <div className="p-4 border-t border-white/10">
