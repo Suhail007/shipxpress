@@ -249,3 +249,27 @@
   .text-shippxpress-navy { color: var(--shippxpress-navy); }
   .text-shippxpress-orange { color: var(--shippxpress-orange); }
 }
+
+/* ShippXpress Sidebar Styling */
+.shippxpress-sidebar {
+  background: linear-gradient(135deg, var(--shippxpress-navy) 0%, var(--shippxpress-dark-navy) 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.shippxpress-sidebar .sidebar-item {
+  @apply flex items-center px-6 py-3 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-4 border-transparent;
+}
+
+.shippxpress-sidebar .sidebar-item.active {
+  @apply text-white bg-white/10 border-l-4 bg-gradient-to-r from-white/10 to-transparent;
+  border-left-color: var(--shippxpress-orange);
+}
+
+.shippxpress-sidebar .sidebar-item:hover {
+  @apply border-l-4;
+  border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+.shippxpress-sidebar .sidebar-item.active:hover {
+  border-left-color: var(--shippxpress-orange);
+}

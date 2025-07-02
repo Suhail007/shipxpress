@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import OrdersTable from "@/components/OrdersTable";
 import CreateOrderModal from "@/components/CreateOrderModal";
+import ClientSidebar from "@/components/ClientSidebar";
 import { Package, AlertCircle, LogOut, DollarSign, FileText, X, Check, Printer } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -100,58 +101,49 @@ export default function ClientOrders() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Impersonation Banner */}
-      {isImpersonated && (
-        <div className="bg-orange-500 text-white px-4 py-2">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4" />
-              <span className="font-medium">Super Admin logged in as client</span>
-            </div>
-            <Button 
-              size="sm" 
-              variant="secondary"
-              onClick={() => window.location.href = "/api/logout"}
-              className="bg-white text-orange-500 hover:bg-gray-100"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Back to Admin
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-4">
-              <Package className="h-8 w-8 text-blue-600" />
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
-                <p className="text-gray-600">Create, track, and manage all delivery orders</p>
+    <>
+      <div className="flex h-screen bg-gray-50">
+        {/* Sidebar */}
+        <ClientSidebar />
+        
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Impersonation Banner */}
+          {isImpersonated && (
+            <div className="bg-orange-500 text-white px-4 py-2">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-medium">Super Admin logged in as client</span>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="secondary"
+                  onClick={() => window.location.href = "/api/logout"}
+                  className="bg-white text-orange-500 hover:bg-gray-100"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Back to Admin
+                </Button>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Badge variant="outline" className="px-3 py-1">
-                {user?.firstName} {user?.lastName}
-              </Badge>
-              {!isImpersonated && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => window.location.href = "/api/logout"}
-                >
-                  Logout
-                </Button>
-              )}
+          )}
+
+          {/* Header */}
+          <div className="bg-white shadow-sm border-b">
+            <div className="px-6 py-4">
+              <div className="flex items-center space-x-4">
+                <Package className="h-8 w-8 text-shippxpress-navy" />
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
+                  <p className="text-gray-600">Create, track, and manage all delivery orders</p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Content Area */}
+          <div className="flex-1 overflow-auto p-6">
         <Tabs defaultValue="pending" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pending" className="flex items-center space-x-2">
@@ -361,7 +353,9 @@ export default function ClientOrders() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+          </div>
+        </div>
       </div>
 
       {/* Create Order Modal */}
@@ -369,6 +363,6 @@ export default function ClientOrders() {
         open={createOrderOpen} 
         onOpenChange={setCreateOrderOpen} 
       />
-    </div>
+    </>
   );
 }
