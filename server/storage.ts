@@ -138,7 +138,10 @@ export class DatabaseStorage implements IStorage {
   async getClientByCredentials(username: string, password: string): Promise<Client | undefined> {
     const result = await db.select().from(clients)
       .where(and(
-        eq(clients.username, username),
+        or(
+          eq(clients.username, username),
+          eq(clients.contactEmail, username)
+        ),
         eq(clients.password, password)
       )).limit(1);
     return result[0];

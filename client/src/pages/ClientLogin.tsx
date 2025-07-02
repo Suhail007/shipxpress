@@ -87,10 +87,10 @@ export default function ClientLogin() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>Username or Email</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Enter your username" 
+                          placeholder="Enter your username or email" 
                           {...field} 
                           autoComplete="username"
                         />
@@ -144,21 +144,25 @@ export default function ClientLogin() {
               {showCredentials && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg text-sm">
                   <h4 className="font-medium text-blue-900 mb-2">Demo Client Accounts:</h4>
-                  <div className="space-y-2 text-blue-800">
+                  <p className="text-blue-700 mb-3 text-xs">You can login with either username or email address</p>
+                  <div className="space-y-3 text-blue-800">
                     <div>
                       <strong>American Distributors LLC:</strong><br />
                       Username: american_dist<br />
+                      Email: admin@americandistributors.com<br />
                       Password: password123
                     </div>
                     <div>
                       <strong>Midwest Supply Co:</strong><br />
                       Username: midwest_supply<br />
-                      Password: password123
+                      Email: orders@midwestsupply.com<br />
+                      Password: logistics456
                     </div>
                     <div>
                       <strong>Great Lakes Logistics:</strong><br />
-                      Username: greatlakes_logistics<br />
-                      Password: password123
+                      Username: greatlakes<br />
+                      Email: dispatch@greatlakeslogistics.com<br />
+                      Password: shipping789
                     </div>
                   </div>
                 </div>

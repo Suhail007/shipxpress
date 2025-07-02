@@ -134,16 +134,20 @@ SESSION_SECRET=your-session-secret-here
 - UTF8MB4 character set for full Unicode support
 
 ## Recent Changes
-- July 2, 2025: **Complete MySQL Migration** - Converted entire system from PostgreSQL to MySQL
-  - Updated database schema to use MySQL syntax (mysqlTable, int, json, etc.)
-  - Converted all table definitions to MySQL-compatible format
-  - Changed database connection from Neon PostgreSQL to MySQL2 driver
-  - Updated session storage to use MemoryStore (temporary solution)
-  - Created MySQL setup script (setup-mysql.sql) with complete database structure
-  - Fixed query parameter passing in frontend API requests
-  - Maintained all existing functionality with MySQL backend
-  - All table relationships and constraints preserved in MySQL format
-  - Sample data and zone configurations included in setup script
+- July 2, 2025: **ShippXpress Complete Rebranding** - Successfully rebranded LogiTrack to ShippXpress
+  - Integrated ship logo and created professional navy/orange color scheme
+  - Built comprehensive sidebar navigation with collapsible design and navigation icons
+  - Enhanced landing page with modern layout, statistics, and feature showcase
+  - Created new Super Admin dashboard with metric cards and improved layout
+  - Fixed client login system to accept both username and email authentication
+  - Updated all branding elements and CSS utilities for consistent ShippXpress theme
+  - Application now fully functional with professional ShippXpress design
+
+- July 2, 2025: **PostgreSQL Database Restoration** - Migrated back from MySQL to PostgreSQL
+  - Restored PostgreSQL connection using Replit's native database support
+  - Fixed schema compatibility issues and field mappings
+  - Resolved client authentication with proper email/username login support
+  - All database operations working correctly with PostgreSQL backend
 
 - June 30, 2025: Multi-tenant route optimization system implemented
   - Added client management with role-based access control
