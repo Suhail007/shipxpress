@@ -9,7 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import Orders from "@/pages/Orders";
 import Drivers from "@/pages/Drivers";
 import DriverApp from "@/pages/DriverApp";
-import SuperAdmin from "@/pages/SuperAdmin";
+import SuperAdminNew from "@/pages/SuperAdminNew";
 import ClientLogin from "@/pages/ClientLogin";
 import ClientOrders from "@/pages/ClientOrders";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,14 +29,20 @@ function Router() {
   }
 
   if (!isAuthenticated) {
-    return <Route path="/" component={Landing} />;
+    return (
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route path="/client-login" component={ClientLogin} />
+        <Route component={Landing} />
+      </Switch>
+    );
   }
 
   // Role-based routing
   if (user?.role === "super_admin") {
     return (
       <Switch>
-        <Route path="/" component={SuperAdmin} />
+        <Route path="/" component={SuperAdminNew} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/orders" component={Orders} />
         <Route path="/drivers" component={Drivers} />
