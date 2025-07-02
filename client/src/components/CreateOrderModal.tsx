@@ -264,65 +264,91 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     const initializeAutocomplete = () => {
       if (!addressInputRef.current || !(window as any).google) return;
 
+      // Clear any existing autocomplete
+      if (autocompleteRef.current) {
+        (window as any).google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+
       autocompleteRef.current = new (window as any).google.maps.places.Autocomplete(
         addressInputRef.current,
         {
           types: ['address'],
           componentRestrictions: { country: 'us' },
-          fields: ['address_component', 'formatted_address', 'geometry']
+          fields: ['address_components', 'formatted_address', 'geometry']
         }
       );
 
-      // Fix dropdown styling for proper cursor behavior
-      const observer = new MutationObserver(() => {
+      // Style dropdown for better visibility
+      const styleDropdown = () => {
         const dropdown = document.querySelector('.pac-container');
-        if (dropdown && !dropdown.hasAttribute('data-fixed')) {
-          dropdown.setAttribute('data-fixed', 'true');
-          dropdown.setAttribute('style', 
-            'z-index: 9999 !important; cursor: pointer !important;'
-          );
-          
-          // Fix individual items cursor
-          const items = dropdown.querySelectorAll('.pac-item');
-          items.forEach(item => {
-            item.setAttribute('style', 'cursor: pointer !important;');
-            item.addEventListener('mousedown', (e) => {
-              e.preventDefault(); // Prevent input blur before selection
-            });
-          });
+        if (dropdown) {
+          dropdown.setAttribute('style', 'z-index: 9999 !important;');
         }
-      });
+      };
 
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true
-      });
+      // Monitor for dropdown appearance
+      const observer = new MutationObserver(styleDropdown);
+      observer.observe(document.body, { childList: true, subtree: true });
 
+      // Handle place selection with improved logic
       autocompleteRef.current.addListener('place_changed', () => {
         console.log('Google Places: place_changed event fired');
         const place = autocompleteRef.current?.getPlace();
         console.log('Google Places: selected place:', place);
         
-        if (place && place.address_components) {
+        // Enhanced place validation - check if we have meaningful data
+        if (!place) {
+          console.log('No place object returned');
+          return;
+        }
+
+        if (!place.address_components && !place.formatted_address) {
+          console.log('Place object has no address data');
+          return;
+        }
+
+        // Log place object for debugging
+        console.log('Place object:', {
+          hasComponents: !!place.address_components,
+          hasFormatted: !!place.formatted_address,
+          hasGeometry: !!place.geometry
+        });
+
+        // Process the place data
+        if (place && (place.address_components || place.formatted_address)) {
           let street = '';
           let city = '';
           let state = '';
           let zip = '';
 
-          place.address_components.forEach((component: any) => {
-            const types = component.types;
-            if (types.includes('street_number')) {
-              street = component.long_name + ' ';
-            } else if (types.includes('route')) {
-              street += component.long_name;
-            } else if (types.includes('locality')) {
-              city = component.long_name;
-            } else if (types.includes('administrative_area_level_1')) {
-              state = component.short_name;
-            } else if (types.includes('postal_code')) {
-              zip = component.long_name;
+          // Use address_components if available for parsing
+          if (place.address_components && place.address_components.length > 0) {
+            place.address_components.forEach((component: any) => {
+              const types = component.types;
+              if (types.includes('street_number')) {
+                street = component.long_name + ' ';
+              } else if (types.includes('route')) {
+                street += component.long_name;
+              } else if (types.includes('locality')) {
+                city = component.long_name;
+              } else if (types.includes('administrative_area_level_1')) {
+                state = component.short_name;
+              } else if (types.includes('postal_code')) {
+                zip = component.long_name;
+              }
+            });
+          } else if (place.formatted_address) {
+            // Fallback: parse formatted_address if address_components is not available
+            console.log('Using formatted_address fallback:', place.formatted_address);
+            const addressParts = place.formatted_address.split(', ');
+            if (addressParts.length >= 3) {
+              street = addressParts[0] || '';
+              city = addressParts[1] || '';
+              const stateZip = addressParts[2]?.split(' ');
+              state = stateZip?.[0] || '';
+              zip = stateZip?.[1] || '';
             }
-          });
+          }
 
           // Update form values with proper options to trigger updates
           const streetAddress = street.trim();
