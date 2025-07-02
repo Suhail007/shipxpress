@@ -651,6 +651,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public order tracking endpoint (no authentication required)
+  app.get("/api/orders/track/:orderNumber", async (req, res) => {
+    try {
+      const { orderNumber } = req.params;
+      console.log(`[TRACK] Tracking order: ${orderNumber}`);
+      
+      const order = await storage.getOrderByNumber(orderNumber);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Return order details for tracking
+      res.json({
+        orderNumber: order.orderNumber,
+        status: order.status,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        deliveryLine1: order.deliveryLine1,
+        deliveryCity: order.deliveryCity,
+        deliveryState: order.deliveryState,
+        deliveryZip: order.deliveryZip,
+        weight: order.weight,
+        distance: order.distance,
+        pickupDate: order.pickupDate,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      });
+    } catch (error) {
+      console.error("Error tracking order:", error);
+      res.status(500).json({ message: "Failed to track order" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

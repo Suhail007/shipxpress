@@ -8,16 +8,27 @@ import OrdersTable from "@/components/OrdersTable";
 import CreateOrderModal from "@/components/CreateOrderModal";
 import ClientSidebar from "@/components/ClientSidebar";
 import BatchCountdown from "@/components/BatchCountdown";
-import { Package, AlertCircle, LogOut, DollarSign, FileText, X, Check, Printer } from "lucide-react";
+import { Package, AlertCircle, LogOut, DollarSign, FileText, X, Check, Printer, Upload, Plus } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 export default function ClientOrders() {
   const { user } = useAuth();
   const [createOrderOpen, setCreateOrderOpen] = useState(false);
+  const [location] = useLocation();
 
-  // Check if this is an impersonated session
-  const isImpersonated = user?.id?.startsWith('client_');
+  // Check if this is an impersonated session from super admin (not direct client login)
+  const isImpersonated = user?.id?.startsWith('client_') && window.location.search.includes('from=admin');
+
+  // Determine current filter based on route
+  const getCurrentFilter = () => {
+    if (location.includes('/pending')) return 'pending';
+    if (location.includes('/in-transit')) return 'in_transit';
+    return undefined; // Show all orders
+  };
+
+  const currentFilter = getCurrentFilter();
 
   // Fetch orders for billing calculations
   const { data: orders = [] } = useQuery<any[]>({
@@ -133,11 +144,35 @@ export default function ClientOrders() {
           {/* Header */}
           <div className="bg-white shadow-sm border-b">
             <div className="px-6 py-4">
-              <div className="flex items-center space-x-4">
-                <Package className="h-8 w-8 text-shippxpress-navy" />
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
-                  <p className="text-gray-600">Create, track, and manage all delivery orders</p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <Package className="h-8 w-8 text-shippxpress-navy" />
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      {currentFilter === 'pending' ? 'Pending Orders' : 
+                       currentFilter === 'in_transit' ? 'Orders In Transit' : 
+                       'Order Management'}
+                    </h1>
+                    <p className="text-gray-600">Create, track, and manage all delivery orders</p>
+                  </div>
+                </div>
+                
+                {/* Action Buttons in Header */}
+                <div className="flex items-center space-x-3">
+                  <Button
+                    onClick={() => setCreateOrderOpen(true)}
+                    className="bg-shippxpress-orange hover:bg-shippxpress-orange/90 text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Order
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-shippxpress-navy text-shippxpress-navy hover:bg-shippxpress-navy hover:text-white"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Bulk Upload
+                  </Button>
                 </div>
               </div>
             </div>
@@ -150,216 +185,15 @@ export default function ClientOrders() {
               <BatchCountdown />
             </div>
             
-        <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending" className="flex items-center space-x-2">
-              <Package className="h-4 w-4" />
-              <span>Pending</span>
-            </TabsTrigger>
-            <TabsTrigger value="voided" className="flex items-center space-x-2">
-              <X className="h-4 w-4" />
-              <span>Voided</span>
-            </TabsTrigger>
-            <TabsTrigger value="delivered" className="flex items-center space-x-2">
-              <Check className="h-4 w-4" />
-              <span>Delivered</span>
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="flex items-center space-x-2">
-              <DollarSign className="h-4 w-4" />
-              <span>Billing</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Pending Orders Tab */}
-          <TabsContent value="pending" className="space-y-6">
-            {/* Quick Actions */}
+            {/* Orders Table - Simplified Layout */}
             <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>
-                  Manage your orders efficiently
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex space-x-4">
-                  <Button onClick={() => setCreateOrderOpen(true)}>
-                    <Package className="mr-2 h-4 w-4" />
-                    New Order
-                  </Button>
-                  <Button variant="outline">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Bulk Upload
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pending Orders Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Pending Orders</CardTitle>
-                <CardDescription>
-                  Orders awaiting pickup or processing
-                </CardDescription>
-              </CardHeader>
               <CardContent className="p-0">
-                <OrdersTable showFilters={true} statusFilter="pending" />
+                <OrdersTable 
+                  showFilters={true} 
+                  statusFilter={currentFilter}
+                />
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* Voided Orders Tab */}
-          <TabsContent value="voided" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Voided Orders</CardTitle>
-                <CardDescription>
-                  Orders that have been voided or cancelled
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <OrdersTable showFilters={true} statusFilter="voided" />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Delivered Orders Tab */}
-          <TabsContent value="delivered" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Delivered Orders</CardTitle>
-                  <CardDescription>
-                    Successfully completed deliveries
-                  </CardDescription>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center space-x-2"
-                  onClick={handlePrintAllLabels}
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>Print All Labels</span>
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                <OrdersTable showFilters={true} statusFilter="delivered" />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Billing Tab */}
-          <TabsContent value="billing" className="space-y-6">
-            {/* Billing Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{billingData.totalOrders}</div>
-                  <p className="text-xs text-muted-foreground">Delivered orders</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Weight</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{Number(billingData?.totalWeight || 0).toFixed(1)} lbs</div>
-                  <p className="text-xs text-muted-foreground">@$0.75 per pound</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Distance</CardTitle>
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{Number(billingData?.totalDistance || 0).toFixed(1)} mi</div>
-                  <p className="text-xs text-muted-foreground">@$0.025 per mile</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Charges</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">${Number(billingData?.totalCharges || 0).toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">Current billing period</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Billing Details */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Billing Details</CardTitle>
-                <CardDescription>
-                  Detailed breakdown of charges for delivered orders
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium mb-2">Pricing Structure</h4>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>• Base charge: $0.75 per pound</div>
-                    <div>• Distance charge: $0.025 per mile</div>
-                    <div>• Billing applies only to delivered orders</div>
-                  </div>
-                </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order Number</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Weight (lbs)</TableHead>
-                      <TableHead>Distance (mi)</TableHead>
-                      <TableHead>Weight Charge</TableHead>
-                      <TableHead>Distance Charge</TableHead>
-                      <TableHead>Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {billingData.deliveredOrders.map((order: any) => {
-                      const weight = parseFloat(order.weight) || 0;
-                      const distance = parseFloat(order.distance) || 0;
-                      const weightCharge = weight * 0.75;
-                      const distanceCharge = distance * 0.025;
-                      const total = weightCharge + distanceCharge;
-                      
-                      return (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium">{order.orderNumber}</TableCell>
-                          <TableCell>{order.customerName}</TableCell>
-                          <TableCell>{weight.toFixed(1)}</TableCell>
-                          <TableCell>{distance.toFixed(1)}</TableCell>
-                          <TableCell>${weightCharge.toFixed(2)}</TableCell>
-                          <TableCell>${distanceCharge.toFixed(2)}</TableCell>
-                          <TableCell className="font-medium">${total.toFixed(2)}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {billingData.deliveredOrders.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                          No delivered orders found for billing
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          </Tabs>
           </div>
         </div>
       </div>

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Eye, Route, Edit, Plus, Upload, Phone, MapPin, Clock, FileText, Printer, X } from "lucide-react";
+import { Eye, Route, Edit, Plus, Upload, Phone, MapPin, Clock, FileText, Printer, X, Package2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CreateOrderModal from "./CreateOrderModal";
 import ShippingLabel from "./ShippingLabel";
@@ -435,6 +435,16 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
                               </div>
                             </DialogContent>
                           </Dialog>
+
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            title="Track Order"
+                            onClick={() => window.open(`/track/${order.orderNumber}`, '_blank')}
+                            className="text-shippxpress-navy hover:text-shippxpress-orange"
+                          >
+                            <Package2 className="h-4 w-4" />
+                          </Button>
 
                           {order.status !== 'voided' && order.status !== 'delivered' && (
                             <Button 
