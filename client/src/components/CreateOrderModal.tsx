@@ -273,6 +273,31 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
         }
       );
 
+      // Fix dropdown styling for proper cursor behavior
+      const observer = new MutationObserver(() => {
+        const dropdown = document.querySelector('.pac-container');
+        if (dropdown && !dropdown.hasAttribute('data-fixed')) {
+          dropdown.setAttribute('data-fixed', 'true');
+          dropdown.setAttribute('style', 
+            'z-index: 9999 !important; cursor: pointer !important;'
+          );
+          
+          // Fix individual items cursor
+          const items = dropdown.querySelectorAll('.pac-item');
+          items.forEach(item => {
+            item.setAttribute('style', 'cursor: pointer !important;');
+            item.addEventListener('mousedown', (e) => {
+              e.preventDefault(); // Prevent input blur before selection
+            });
+          });
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
       autocompleteRef.current.addListener('place_changed', () => {
         console.log('Google Places: place_changed event fired');
         const place = autocompleteRef.current?.getPlace();
@@ -341,24 +366,30 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
             // Force form to re-validate and update
             form.trigger();
-          }, 50);
 
-          // Calculate distance immediately if we have coordinates
-          if (place.geometry && place.geometry.location) {
-            const lat = typeof place.geometry.location.lat === 'function' 
-              ? place.geometry.location.lat() 
-              : place.geometry.location.lat;
-            const lng = typeof place.geometry.location.lng === 'function' 
-              ? place.geometry.location.lng() 
-              : place.geometry.location.lng;
+            // Calculate distance immediately if we have coordinates
+            if (place.geometry && place.geometry.location) {
+              const lat = typeof place.geometry.location.lat === 'function' 
+                ? place.geometry.location.lat() 
+                : place.geometry.location.lat;
+              const lng = typeof place.geometry.location.lng === 'function' 
+                ? place.geometry.location.lng() 
+                : place.geometry.location.lng;
+              
+              calculateRealTimeDistance(lat, lng);
+            }
+
+            // Hide the dropdown properly
+            const dropdown = document.querySelector('.pac-container');
+            if (dropdown) {
+              dropdown.style.display = 'none';
+            }
             
-            calculateRealTimeDistance(lat, lng);
-          }
-
-          // Blur the input to dismiss the dropdown
-          if (addressInputRef.current) {
-            addressInputRef.current.blur();
-          }
+            // Blur the input to dismiss focus
+            if (addressInputRef.current) {
+              addressInputRef.current.blur();
+            }
+          }, 50);
         }
       });
     };

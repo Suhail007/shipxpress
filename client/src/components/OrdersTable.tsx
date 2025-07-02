@@ -27,6 +27,8 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [ordersPerPage] = useState(10);
 
   // Use propStatusFilter if provided, otherwise use local state
   const activeStatusFilter = propStatusFilter || statusFilter;
@@ -133,23 +135,44 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "pending":
-        return "fas fa-clock";
+        return <Clock className="h-3 w-3" />;
       case "assigned":
-        return "fas fa-user-check";
+        return <Eye className="h-3 w-3" />;
       case "picked":
-        return "fas fa-hand-paper";
+        return <Route className="h-3 w-3" />;
       case "in_transit":
-        return "fas fa-truck";
+        return <Route className="h-3 w-3" />;
       case "delivered":
-        return "fas fa-check-circle";
+        return <Eye className="h-3 w-3" />;
       case "failed":
-        return "fas fa-times-circle";
+        return <X className="h-3 w-3" />;
       default:
-        return "fas fa-question-circle";
+        return <Clock className="h-3 w-3" />;
     }
   };
 
-  const displayedOrders = limit ? orders.slice(0, limit) : orders;
+  // Filter orders based on search and status
+  const filteredOrders = orders.filter((order: any) => {
+    const matchesSearch = !searchQuery || 
+      order.customerName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.orderNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.deliveryCity?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.deliveryState?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = activeStatusFilter === "all" || order.status === activeStatusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Pagination calculations
+  const totalOrders = filteredOrders.length;
+  const totalPages = Math.ceil(totalOrders / ordersPerPage);
+  const startIndex = (currentPage - 1) * ordersPerPage;
+  const endIndex = startIndex + ordersPerPage;
+
+  const displayedOrders = limit 
+    ? filteredOrders.slice(0, limit) 
+    : filteredOrders.slice(startIndex, endIndex);
 
   return (
     <>
@@ -238,6 +261,9 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
                       Customer
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Delivery Location
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -263,12 +289,41 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          Customer #{order.customerId}
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 h-8 w-8">
+                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                              {order.customerEmail?.includes('@') ? 
+                                <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                                </svg>
+                                :
+                                <svg className="h-4 w-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clipRule="evenodd" />
+                                </svg>
+                              }
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {order.customerName}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {order.customerPhone}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500 flex items-center">
-                          <MapPin className="h-3 w-3 mr-1" />
-                          Delivery Location
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900 flex items-center">
+                          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                          <div>
+                            <div className="font-medium">
+                              {order.deliveryCity}, {order.deliveryState}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {order.distance ? `${order.distance} miles` : 'Distance pending'}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

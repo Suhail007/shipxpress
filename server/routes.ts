@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertOrderSchema, insertCustomerSchema, insertDriverSchema, updateOrderStatusSchema } from "@shared/schema";
 import { z } from "zod";
+import { sendOrderStatusNotification } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -195,6 +196,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const order = await storage.updateOrderStatus(orderId, statusUpdate, userId);
       
+      // Send email notification if customer email is available
+      if (order.customerEmail) {
+        try {
+          await sendOrderStatusNotification(order, statusUpdate.status, order.customerEmail);
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+          // Don't fail the request if email fails
+        }
+      }
+      
       // Log activity
       await storage.logActivity(
         userId,
@@ -227,6 +238,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedOrder = await storage.updateOrderStatus(order.id, statusUpdate, userId);
+      
+      // Send email notification if customer email is available
+      if (updatedOrder.customerEmail) {
+        try {
+          await sendOrderStatusNotification(updatedOrder, statusUpdate.status, updatedOrder.customerEmail);
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+          // Don't fail the request if email fails
+        }
+      }
       
       // Log activity
       await storage.logActivity(

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import OrdersTable from "@/components/OrdersTable";
 import CreateOrderModal from "@/components/CreateOrderModal";
 import ClientSidebar from "@/components/ClientSidebar";
+import BatchCountdown from "@/components/BatchCountdown";
 import { Package, AlertCircle, LogOut, DollarSign, FileText, X, Check, Printer } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -144,6 +145,11 @@ export default function ClientOrders() {
 
           {/* Content Area */}
           <div className="flex-1 overflow-auto p-6">
+            {/* Batch Management Section */}
+            <div className="mb-6">
+              <BatchCountdown />
+            </div>
+            
         <Tabs defaultValue="pending" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pending" className="flex items-center space-x-2">
