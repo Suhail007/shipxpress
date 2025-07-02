@@ -110,24 +110,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+    try {
+      // Try to insert first
+      await db.insert(users).values(userData);
+      const insertedUser = await db.select().from(users).where(eq(users.id, userData.id)).limit(1);
+      return insertedUser[0];
+    } catch (error: any) {
+      // If user exists (duplicate key error), update instead
+      if (error.code === 'ER_DUP_ENTRY') {
+        await db.update(users)
+          .set({
+            ...userData,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userData.id));
+        
+        const updatedUser = await db.select().from(users).where(eq(users.id, userData.id)).limit(1);
+        return updatedUser[0];
+      }
+      throw error;
+    }
   }
 
   // Client operations
   async createClient(clientData: InsertClient): Promise<Client> {
-    const [client] = await db.insert(clients).values(clientData).returning();
-    return client;
+    await db.insert(clients).values(clientData);
+    const result = await db.select().from(clients).where(eq(clients.username, clientData.username)).limit(1);
+    return result[0];
   }
 
   async getClient(id: number): Promise<Client | undefined> {
@@ -149,14 +158,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateClient(id: number, updates: Partial<InsertClient>): Promise<Client> {
-    const [client] = await db.update(clients).set(updates).where(eq(clients.id, id)).returning();
-    return client;
+    await db.update(clients).set(updates).where(eq(clients.id, id));
+    const result = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+    return result[0];
   }
 
   // Zone operations
   async createZone(zoneData: InsertZone): Promise<Zone> {
-    const [zone] = await db.insert(zones).values(zoneData).returning();
-    return zone;
+    await db.insert(zones).values(zoneData);
+    const result = await db.select().from(zones).where(eq(zones.name, zoneData.name)).limit(1);
+    return result[0];
   }
 
   async getZone(id: number): Promise<Zone | undefined> {
@@ -169,14 +180,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateZone(id: number, updates: Partial<InsertZone>): Promise<Zone> {
-    const [zone] = await db.update(zones).set(updates).where(eq(zones.id, id)).returning();
-    return zone;
+    await db.update(zones).set(updates).where(eq(zones.id, id));
+    const result = await db.select().from(zones).where(eq(zones.id, id)).limit(1);
+    return result[0];
   }
 
   // Driver operations
   async createDriver(driverData: InsertDriver): Promise<Driver> {
-    const [driver] = await db.insert(drivers).values(driverData).returning();
-    return driver;
+    await db.insert(drivers).values(driverData);
+    const result = await db.select().from(drivers).where(eq(drivers.userId, driverData.userId)).limit(1);
+    return result[0];
   }
 
   async getDriver(id: number): Promise<Driver | undefined> {
@@ -203,8 +216,9 @@ export class DatabaseStorage implements IStorage {
       updateData.currentLocation = location;
     }
 
-    const [driver] = await db.update(drivers).set(updateData).where(eq(drivers.id, id)).returning();
-    return driver;
+    await db.update(drivers).set(updateData).where(eq(drivers.id, id));
+    const result = await db.select().from(drivers).where(eq(drivers.id, id)).limit(1);
+    return result[0];
   }
 
   async getAvailableDrivers(): Promise<Driver[]> {
@@ -216,14 +230,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async assignDriverToZone(driverId: number, zoneId: number): Promise<Driver> {
-    const [driver] = await db.update(drivers)
+    await db.update(drivers)
       .set({
         zoneId: zoneId,
         updatedAt: new Date(),
       })
-      .where(eq(drivers.id, driverId))
-      .returning();
-    return driver;
+      .where(eq(drivers.id, driverId));
+    
+    const result = await db.select().from(drivers).where(eq(drivers.id, driverId)).limit(1);
+    return result[0];
   }
 
   async getDriversByZone(zoneId: number): Promise<Driver[]> {
@@ -232,8 +247,16 @@ export class DatabaseStorage implements IStorage {
 
   // Customer operations
   async createCustomer(customerData: InsertCustomer): Promise<Customer> {
-    const [customer] = await db.insert(customers).values(customerData).returning();
-    return customer;
+    await db.insert(customers).values(customerData);
+    
+    // Find by phone or name since we don't have the ID yet
+    let result;
+    if (customerData.phone) {
+      result = await db.select().from(customers).where(eq(customers.phone, customerData.phone)).limit(1);
+    } else {
+      result = await db.select().from(customers).where(eq(customers.name, customerData.name)).limit(1);
+    }
+    return result[0];
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {
@@ -254,13 +277,14 @@ export class DatabaseStorage implements IStorage {
     const insertData = {
       ...orderData,
       orderNumber,
-      pickupDate: orderData.pickupDate,
+      pickupDate: new Date(orderData.pickupDate),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
 
-    const [order] = await db.insert(orders).values(insertData).returning();
-    return order;
+    await db.insert(orders).values(insertData);
+    const result = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber)).limit(1);
+    return result[0];
   }
 
   async getOrder(id: number): Promise<Order | undefined> {
@@ -284,7 +308,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrderStatus(orderId: number, statusUpdate: UpdateOrderStatus, updatedBy: string): Promise<Order> {
-    const updateData: any = {
+    const updateData = {
       status: statusUpdate.status,
       updatedAt: new Date(),
     };
@@ -298,7 +322,7 @@ export class DatabaseStorage implements IStorage {
       updateData.actualDeliveryTime = new Date();
     }
 
-    const [order] = await db.update(orders).set(updateData).where(eq(orders.id, orderId)).returning();
+    await db.update(orders).set(updateData).where(eq(orders.id, orderId));
 
     // Add to status history
     await db.insert(orderStatusHistory).values({
@@ -309,21 +333,22 @@ export class DatabaseStorage implements IStorage {
       timestamp: new Date(),
     });
 
-    return order;
+    const result = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+    return result[0];
   }
 
   async assignOrderToDriver(orderId: number, driverId: number, assignedBy: string): Promise<Order> {
-    const [order] = await db.update(orders)
+    await db.update(orders)
       .set({
         driverId: driverId,
         status: "assigned",
         assignedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(orders.id, orderId))
-      .returning();
+      .where(eq(orders.id, orderId));
 
-    return order;
+    const result = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+    return result[0];
   }
 
   async getOrdersForDriver(driverId: number, status?: string): Promise<Order[]> {
@@ -343,15 +368,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async logActivity(userId: string, action: string, description: string, metadata?: any): Promise<ActivityLog> {
-    const [activity] = await db.insert(activityLogs).values({
+    await db.insert(activityLogs).values({
       userId,
       action,
       description,
       metadata,
       timestamp: new Date(),
-    }).returning();
+    });
 
-    return activity;
+    const result = await db.select().from(activityLogs)
+      .where(and(
+        eq(activityLogs.userId, userId),
+        eq(activityLogs.action, action)
+      ))
+      .orderBy(desc(activityLogs.timestamp))
+      .limit(1);
+    return result[0];
   }
 
   async getRecentActivity(limit = 20): Promise<ActivityLog[]> {
@@ -385,7 +417,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async voidOrder(orderId: number, voidData: VoidOrder, voidedBy: string): Promise<Order> {
-    const [order] = await db.update(orders)
+    await db.update(orders)
       .set({
         status: "voided",
         voidReason: voidData.voidReason,
@@ -393,15 +425,18 @@ export class DatabaseStorage implements IStorage {
         voidedBy: voidedBy,
         updatedAt: new Date(),
       })
-      .where(eq(orders.id, orderId))
-      .returning();
+      .where(eq(orders.id, orderId));
 
-    return order;
+    const result = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+    return result[0];
   }
 
   async createRouteBatch(batchData: InsertRouteBatch): Promise<RouteBatch> {
-    const [batch] = await db.insert(routeBatches).values(batchData).returning();
-    return batch;
+    await db.insert(routeBatches).values(batchData);
+    const result = await db.select().from(routeBatches)
+      .where(eq(routeBatches.date, batchData.date))
+      .limit(1);
+    return result[0];
   }
 
   async getCurrentBatch(date: string): Promise<RouteBatch | undefined> {
@@ -441,16 +476,23 @@ export class DatabaseStorage implements IStorage {
     // Create optimized routes for each zone
     const routes = [];
     for (const [zoneId, zoneOrders] of ordersByZone) {
-      const [route] = await db.insert(optimizedRoutes).values({
+      const routeData = {
         batchId,
         zoneId,
         routeData: zoneOrders,
-        estimatedDistance: "50", // Placeholder calculation
+        estimatedDistance: 50, // Placeholder calculation
         estimatedTime: zoneOrders.length * 30, // 30 min per order
         createdAt: new Date(),
-      }).returning();
-      
-      routes.push(route);
+      };
+
+      await db.insert(optimizedRoutes).values(routeData);
+      const result = await db.select().from(optimizedRoutes)
+        .where(and(
+          eq(optimizedRoutes.batchId, batchId),
+          eq(optimizedRoutes.zoneId, zoneId)
+        ))
+        .limit(1);
+      routes.push(result[0]);
     }
 
     return routes;
@@ -469,8 +511,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOptimizedRoute(routeData: InsertOptimizedRoute): Promise<OptimizedRoute> {
-    const [route] = await db.insert(optimizedRoutes).values(routeData).returning();
-    return route;
+    await db.insert(optimizedRoutes).values(routeData);
+    
+    const result = await db.select().from(optimizedRoutes)
+      .where(and(
+        eq(optimizedRoutes.batchId, routeData.batchId),
+        eq(optimizedRoutes.zoneId, routeData.zoneId)
+      ))
+      .limit(1);
+    return result[0];
   }
 
   async getOptimizedRoute(id: number): Promise<OptimizedRoute | undefined> {
@@ -483,16 +532,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async assignRouteToDriver(routeId: number, driverId: number): Promise<OptimizedRoute> {
-    const [route] = await db.update(optimizedRoutes)
+    await db.update(optimizedRoutes)
       .set({
         driverId: driverId,
         status: "assigned",
         assignedAt: new Date(),
       })
-      .where(eq(optimizedRoutes.id, routeId))
-      .returning();
+      .where(eq(optimizedRoutes.id, routeId));
 
-    return route;
+    const result = await db.select().from(optimizedRoutes).where(eq(optimizedRoutes.id, routeId)).limit(1);
+    return result[0];
   }
 
   async getSuperAdminStats(): Promise<any> {

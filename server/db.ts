@@ -1,32 +1,23 @@
-import mysql from 'mysql2/promise';
-import { drizzle } from 'drizzle-orm/mysql2';
+import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 import * as schema from "@shared/schema";
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
-    "DATABASE_URL must be set. Format: mysql://username:password@hostname:3306/database",
+    "DATABASE_URL must be set. Format: postgresql://username:password@hostname:5432/database",
   );
 }
 
-// Create MySQL connection pool
-export const pool = mysql.createPool({
-  uri: process.env.DATABASE_URL,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-});
-
-export const db = drizzle(pool, { schema, mode: 'default' });
+// Create PostgreSQL connection
+const sql = neon(process.env.DATABASE_URL);
+export const db = drizzle(sql, { schema });
 
 // Test connection on startup
-pool.getConnection()
-  .then(connection => {
-    console.log('✅ MySQL connection established successfully');
-    connection.release();
+sql`SELECT 1`
+  .then(() => {
+    console.log('✅ PostgreSQL connection established successfully');
   })
   .catch(err => {
-    console.error('❌ MySQL connection failed:', err.message);
-    console.log('📝 Please check your DATABASE_URL and ensure MySQL server is running');
+    console.error('❌ PostgreSQL connection failed:', err.message);
+    console.log('📝 Please check your DATABASE_URL and ensure PostgreSQL server is running');
   });
