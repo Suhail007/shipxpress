@@ -39,6 +39,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Google Maps API configuration
+  app.get("/api/config/google-maps-key", (req, res) => {
+    res.json({ 
+      apiKey: process.env.GOOGLE_MAPS_API_KEY || '' 
+    });
+  });
+
   // Distance calculation using Google Maps API
   app.post("/api/calculate-distance", async (req, res) => {
     const { pickup, delivery } = req.body;

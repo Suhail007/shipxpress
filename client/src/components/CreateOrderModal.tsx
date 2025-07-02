@@ -368,47 +368,51 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Customer Information - Compact Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <FormField
-                control={form.control}
-                name="customerName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm">Customer Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" className="h-8" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="customerPhone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm">Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="(555) 123-4567" className="h-8" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="customerEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm">Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="john@example.com" className="h-8" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            {/* Customer Information - Right to Left Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="customerEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="john@example.com" className="h-8" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="customerPhone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">Phone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="(555) 123-4567" className="h-8" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="customerName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">Customer Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" className="h-8" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             {/* Delivery Address - Compact */}
@@ -439,46 +443,50 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                 )}
               />
 
-              <div className="grid grid-cols-3 gap-3">
-                <FormField
-                  control={form.control}
-                  name="deliveryCity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">City</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Chicago" className="h-8" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="deliveryState"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">State</FormLabel>
-                      <FormControl>
-                        <Input placeholder="IL" className="h-8" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="deliveryZip"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">ZIP</FormLabel>
-                      <FormControl>
-                        <Input placeholder="60601" className="h-8" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="deliveryZip"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">ZIP Code</FormLabel>
+                        <FormControl>
+                          <Input placeholder="60601" className="h-8" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="deliveryState"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">State</FormLabel>
+                        <FormControl>
+                          <Input placeholder="IL" className="h-8" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <FormField
+                    control={form.control}
+                    name="deliveryCity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">City</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Chicago" className="h-8" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               {/* Address Validation - Compact */}
@@ -507,43 +515,47 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
               </div>
             </div>
 
-            {/* Order Details - Compact */}
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="pickupDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm">Pickup Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" className="h-8" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="serviceType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm">Service Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+            {/* Order Details - Right to Left Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="serviceType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">Service Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-8">
+                            <SelectValue placeholder="Select service" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="standard">Standard</SelectItem>
+                          <SelectItem value="express">Express</SelectItem>
+                          <SelectItem value="overnight">Overnight</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="space-y-3">
+                <FormField
+                  control={form.control}
+                  name="pickupDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">Pickup Date</FormLabel>
                       <FormControl>
-                        <SelectTrigger className="h-8">
-                          <SelectValue placeholder="Select service" />
-                        </SelectTrigger>
+                        <Input type="date" className="h-8" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="express">Express</SelectItem>
-                        <SelectItem value="overnight">Overnight</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             {/* Package Information - Compact */}
