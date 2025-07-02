@@ -224,75 +224,99 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
       }
 
       // Initialize autocomplete
-      autocompleteRef.current = new google.maps.places.Autocomplete(
-        addressInputRef.current,
-        {
-          types: ['address'],
-          componentRestrictions: { country: 'us' },
-          fields: ['place_id', 'formatted_address', 'address_components', 'geometry']
-        }
-      );
+      console.log('Initializing Google Places Autocomplete...');
+      
+      try {
+        autocompleteRef.current = new google.maps.places.Autocomplete(
+          addressInputRef.current,
+          {
+            types: ['address'],
+            componentRestrictions: { country: 'us' },
+            fields: ['place_id', 'formatted_address', 'address_components', 'geometry']
+          }
+        );
 
-      // Handle place selection
-      autocompleteRef.current.addListener('place_changed', () => {
-        console.log('Google Places: place_changed event fired');
-        
-        try {
-          const place = autocompleteRef.current?.getPlace();
-          console.log('Google Places: selected place:', place);
+        console.log('Autocomplete initialized successfully');
+
+        // Handle place selection
+        autocompleteRef.current.addListener('place_changed', () => {
+          console.log('Google Places: place_changed event fired');
           
-          if (!place || !place.place_id) {
-            console.log('Invalid place selection');
-            return;
-          }
-
-          // Process the place data
-          if (place.address_components) {
-            let street = '';
-            let city = '';
-            let state = '';
-            let zip = '';
-
-            place.address_components.forEach((component) => {
-              const types = component.types;
-              if (types.includes('street_number')) {
-                street = component.long_name + ' ';
-              } else if (types.includes('route')) {
-                street += component.long_name;
-              } else if (types.includes('locality')) {
-                city = component.long_name;
-              } else if (types.includes('administrative_area_level_1')) {
-                state = component.short_name;
-              } else if (types.includes('postal_code')) {
-                zip = component.long_name;
+          setTimeout(() => {
+            try {
+              const place = autocompleteRef.current?.getPlace();
+              console.log('Google Places: selected place:', place);
+              
+              if (!place || !place.place_id) {
+                console.log('Invalid place selection');
+                return;
               }
-            });
 
-            const streetAddress = street.trim();
-            console.log('Setting form values:', { streetAddress, city, state, zip });
-            
-            // Update form values
-            form.setValue('deliveryLine1', streetAddress, { shouldValidate: true });
-            form.setValue('deliveryCity', city, { shouldValidate: true });
-            form.setValue('deliveryState', state, { shouldValidate: true });
-            form.setValue('deliveryZip', zip, { shouldValidate: true });
+              // Process the place data
+              if (place.address_components) {
+                let street = '';
+                let city = '';
+                let state = '';
+                let zip = '';
 
-            // Calculate distance if we have coordinates
-            if (place.geometry && place.geometry.location) {
-              const lat = place.geometry.location.lat();
-              const lng = place.geometry.location.lng();
-              calculateRealTimeDistance(lat, lng);
+                place.address_components.forEach((component) => {
+                  const types = component.types;
+                  if (types.includes('street_number')) {
+                    street = component.long_name + ' ';
+                  } else if (types.includes('route')) {
+                    street += component.long_name;
+                  } else if (types.includes('locality')) {
+                    city = component.long_name;
+                  } else if (types.includes('administrative_area_level_1')) {
+                    state = component.short_name;
+                  } else if (types.includes('postal_code')) {
+                    zip = component.long_name;
+                  }
+                });
+
+                const streetAddress = street.trim();
+                console.log('Setting form values:', { streetAddress, city, state, zip });
+                
+                // Update form values
+                form.setValue('deliveryLine1', streetAddress, { shouldValidate: true });
+                form.setValue('deliveryCity', city, { shouldValidate: true });
+                form.setValue('deliveryState', state, { shouldValidate: true });
+                form.setValue('deliveryZip', zip, { shouldValidate: true });
+
+                // Calculate distance if we have coordinates
+                if (place.geometry && place.geometry.location) {
+                  const lat = place.geometry.location.lat();
+                  const lng = place.geometry.location.lng();
+                  calculateRealTimeDistance(lat, lng);
+                }
+
+                // Update address input value
+                if (addressInputRef.current) {
+                  addressInputRef.current.value = streetAddress;
+                  // Trigger change event for react-hook-form
+                  const event = new Event('input', { bubbles: true });
+                  addressInputRef.current.dispatchEvent(event);
+                }
+              }
+            } catch (error) {
+              console.error('Error processing place selection:', error);
             }
+          }, 100);
+        });
 
-            // Update address input value
-            if (addressInputRef.current) {
-              addressInputRef.current.value = streetAddress;
+        // Also handle on focus out to catch manual selections
+        addressInputRef.current.addEventListener('blur', () => {
+          setTimeout(() => {
+            const place = autocompleteRef.current?.getPlace();
+            if (place && place.place_id) {
+              console.log('Place selected on blur:', place);
             }
-          }
-        } catch (error) {
-          console.error('Error processing place selection:', error);
-        }
-      });
+          }, 100);
+        });
+
+      } catch (error) {
+        console.error('Error initializing autocomplete:', error);
+      }
     };
 
     if (open) {
