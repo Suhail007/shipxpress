@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Eye, Route, Edit, Plus, Upload, Phone, MapPin, Clock, FileText, Printer, X } from "lucide-react";
+import { Eye, Route, Edit, Plus, Upload, Phone, MapPin, Clock, FileText, Printer } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import CreateOrderModal from "./CreateOrderModal";
 import ShippingLabel from "./ShippingLabel";
@@ -18,21 +18,17 @@ import { Order, Driver } from "@shared/schema";
 interface OrdersTableProps {
   limit?: number;
   showFilters?: boolean;
-  statusFilter?: string;
 }
 
-export default function OrdersTable({ limit, showFilters = true, statusFilter: propStatusFilter }: OrdersTableProps) {
+export default function OrdersTable({ limit, showFilters = true }: OrdersTableProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Use propStatusFilter if provided, otherwise use local state
-  const activeStatusFilter = propStatusFilter || statusFilter;
-
   const { data: orders = [], isLoading } = useQuery<Order[]>({
-    queryKey: ["/api/orders", { status: activeStatusFilter, search: searchQuery }],
+    queryKey: ["/api/orders", { status: statusFilter, search: searchQuery }],
   });
 
   const { data: availableDrivers = [] } = useQuery<Driver[]>({
@@ -41,11 +37,7 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
 
   const assignDriverMutation = useMutation({
     mutationFn: async ({ orderId, driverId }: { orderId: number; driverId: number }) => {
-      await apiRequest(`/api/orders/${orderId}/assign`, {
-        method: "PATCH",
-        body: JSON.stringify({ driverId }),
-        headers: { "Content-Type": "application/json" },
-      });
+      await apiRequest("PATCH", `/api/orders/${orderId}/assign`, { driverId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
@@ -74,41 +66,6 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
     },
   });
 
-  const voidOrderMutation = useMutation({
-    mutationFn: async (orderId: number) => {
-      await apiRequest(`/api/orders/${orderId}/void`, {
-        method: "POST",
-        body: JSON.stringify({ reason: "Client requested cancellation" }),
-        headers: { "Content-Type": "application/json" },
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      toast({
-        title: "Order Voided",
-        description: "Order has been voided successfully.",
-      });
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to void order. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -123,8 +80,6 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
         return "bg-success-100 text-success-800";
       case "failed":
         return "bg-error-100 text-error-800";
-      case "voided":
-        return "bg-gray-300 text-gray-600";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -178,23 +133,20 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
           
           {showFilters && (
             <div className="flex space-x-2 mt-4">
-              {!propStatusFilter && (
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="assigned">Assigned</SelectItem>
-                    <SelectItem value="picked">Picked</SelectItem>
-                    <SelectItem value="in_transit">In Transit</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                    <SelectItem value="voided">Voided</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="assigned">Assigned</SelectItem>
+                  <SelectItem value="picked">Picked</SelectItem>
+                  <SelectItem value="in_transit">In Transit</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
               <Input
                 type="date"
                 className="w-40"
@@ -238,10 +190,10 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
                       Customer
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      Driver
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Cost
+                      Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
@@ -253,7 +205,7 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {displayedOrders?.map((order: any) => (
-                    <tr key={order.id} className={`hover:bg-gray-50 ${order.status === 'voided' ? 'opacity-60 bg-gray-50' : ''}`}>
+                    <tr key={order.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {order.orderNumber}
@@ -272,23 +224,55 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge className={`${getStatusColor(order.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                          {getStatusIcon(order.status)}
-                          <span className="ml-1">
-                            {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
-                          </span>
-                        </Badge>
-                        {order.status === 'voided' && (
-                          <div className="text-xs text-red-500 mt-1">Order cancelled</div>
+                        {order.driverId ? (
+                          <div className="flex items-center">
+                            <Avatar className="h-8 w-8 mr-3">
+                              <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${order.driverId}`} />
+                              <AvatarFallback>D{order.driverId}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                Driver #{order.driverId}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                Active
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <Badge className="bg-gray-100 text-gray-800">
+                              Unassigned
+                            </Badge>
+                            {availableDrivers && availableDrivers.length > 0 && (
+                              <Select
+                                onValueChange={(driverId) => 
+                                  assignDriverMutation.mutate({ 
+                                    orderId: order.id, 
+                                    driverId: parseInt(driverId) 
+                                  })
+                                }
+                              >
+                                <SelectTrigger className="w-32 h-8">
+                                  <SelectValue placeholder="Assign" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {availableDrivers.map((driver: Driver) => (
+                                    <SelectItem key={driver.id} value={driver.id.toString()}>
+                                      Driver #{driver.id}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          ${((order.weight || 0) * 0.75 + (order.distance || 0) * 0.025).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {order.weight || 0} lbs • {order.distance || 0} mi
-                        </div>
+                        <Badge className={getStatusColor(order.status)}>
+                          <i className={`${getStatusIcon(order.status)} mr-1`}></i>
+                          {order.status.replace('_', ' ')}
+                        </Badge>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {order.estimatedDeliveryTime ? (
@@ -302,97 +286,28 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex items-center space-x-2">
+                          <Button size="sm" variant="ghost">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost">
+                            <Route className="h-4 w-4" />
+                          </Button>
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button size="sm" variant="ghost" title="View Order Details">
-                                <Eye className="h-4 w-4" />
+                              <Button size="sm" variant="ghost" title="Generate Shipping Label">
+                                <FileText className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-2xl">
+                            <DialogContent className="max-w-lg">
                               <DialogHeader>
-                                <DialogTitle>Order Details - {order.orderNumber}</DialogTitle>
+                                <DialogTitle>Shipping Label - {order.orderNumber}</DialogTitle>
                               </DialogHeader>
-                              <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <h3 className="font-medium text-sm mb-2">Customer Information</h3>
-                                    <p className="text-sm">{order.customerName}</p>
-                                    <p className="text-sm text-gray-500">{order.customerPhone}</p>
-                                  </div>
-                                  <div>
-                                    <h3 className="font-medium text-sm mb-2">Delivery Address</h3>
-                                    <p className="text-sm">{order.deliveryLine1}</p>
-                                    <p className="text-sm">{order.deliveryCity}, {order.deliveryState} {order.deliveryZip}</p>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h3 className="font-medium text-sm mb-2">Package Details</h3>
-                                  {order.packages?.map((pkg: any, index: number) => (
-                                    <div key={index} className="text-sm border p-2 rounded mb-2">
-                                      <p>Package {index + 1}/{order.packages.length}</p>
-                                      <p>Weight: {pkg.weight} lbs</p>
-                                      <p>Dimensions: {pkg.dimensions?.length}" × {pkg.dimensions?.width}" × {pkg.dimensions?.height}"</p>
-                                      {pkg.description && <p>Description: {pkg.description}</p>}
-                                    </div>
-                                  ))}
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                  <div>
-                                    <h3 className="font-medium text-sm mb-2">Billing</h3>
-                                    <p className="text-sm">Weight: {order.weight || 0} lbs × $0.75 = ${((order.weight || 0) * 0.75).toFixed(2)}</p>
-                                    <p className="text-sm">Distance: {order.distance || 0} mi × $0.025 = ${((order.distance || 0) * 0.025).toFixed(2)}</p>
-                                    <p className="text-sm font-medium">Total: ${((order.weight || 0) * 0.75 + (order.distance || 0) * 0.025).toFixed(2)}</p>
-                                  </div>
-                                  <div>
-                                    <h3 className="font-medium text-sm mb-2">Status</h3>
-                                    <Badge className={getStatusColor(order.status)}>
-                                      {order.status.charAt(0).toUpperCase() + order.status.slice(1).replace('_', ' ')}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
+                              <ShippingLabel order={order} />
                             </DialogContent>
                           </Dialog>
-                          
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button size="sm" variant="ghost" title="Generate Shipping Labels">
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-6">
-                              <DialogHeader className="mb-6">
-                                <DialogTitle className="text-xl">Shipping Labels - {order.orderNumber}</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-8">
-                                {order.packages?.map((pkg: any, index: number) => (
-                                  <div key={index} className="border-b border-gray-200 pb-6 last:border-b-0">
-                                    <h3 className="font-semibold text-lg mb-4 text-gray-800">
-                                      Package {index + 1} of {order.packages.length}
-                                    </h3>
-                                    <div className="flex justify-center">
-                                      <ShippingLabel 
-                                        order={{...order, currentPackage: index + 1, totalPackages: order.packages.length, packageDetails: pkg}} 
-                                      />
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-
-                          {order.status !== 'voided' && order.status !== 'delivered' && (
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
-                              title="Void Order"
-                              onClick={() => voidOrderMutation.mutate(order.id)}
-                              disabled={voidOrderMutation.isPending}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button size="sm" variant="ghost">
+                            <Edit className="h-4 w-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>

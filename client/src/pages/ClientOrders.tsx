@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import OrdersTable from "@/components/OrdersTable";
 import CreateOrderModal from "@/components/CreateOrderModal";
-import { Package, AlertCircle, LogOut, DollarSign, FileText, X, Check, Printer } from "lucide-react";
+import { Package, AlertCircle, LogOut, DollarSign, FileText } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
@@ -18,86 +18,30 @@ export default function ClientOrders() {
   const isImpersonated = user?.id?.startsWith('client_');
 
   // Fetch orders for billing calculations
-  const { data: orders = [] } = useQuery<any[]>({
+  const { data: orders = [] } = useQuery({
     queryKey: ['/api/orders'],
   });
 
   // Calculate billing information
   const calculateBilling = () => {
-    const deliveredOrders = Array.isArray(orders) ? orders.filter((order: any) => order.status === 'delivered') : [];
-    
-    const totalWeight = deliveredOrders.reduce((sum: number, order: any) => {
-      const weight = parseFloat(order.weight) || 0;
-      return sum + weight;
-    }, 0);
-
-    const totalDistance = deliveredOrders.reduce((sum: number, order: any) => {
-      const distance = parseFloat(order.distance) || 0;
-      return sum + distance;
-    }, 0);
+    const deliveredOrders = orders.filter((order: any) => order.status === 'delivered');
     
     const totalCharges = deliveredOrders.reduce((total: number, order: any) => {
-      const weight = parseFloat(order.weight) || 0;
-      const distance = parseFloat(order.distance) || 0;
-      const weightCharge = weight * 0.75; // $0.75 per pound
-      const distanceCharge = distance * 0.025; // $0.025 per mile
+      const weightCharge = (order.weight || 0) * 0.75; // $0.75 per pound
+      const distanceCharge = (order.distance || 0) * 0.025; // $0.025 per mile
       return total + weightCharge + distanceCharge;
     }, 0);
 
     return {
       totalOrders: deliveredOrders.length,
-      totalWeight: Number(totalWeight) || 0,
-      totalDistance: Number(totalDistance) || 0,
-      totalCharges: Number(totalCharges) || 0,
+      totalWeight: deliveredOrders.reduce((sum: number, order: any) => sum + (order.weight || 0), 0),
+      totalDistance: deliveredOrders.reduce((sum: number, order: any) => sum + (order.distance || 0), 0),
+      totalCharges,
       deliveredOrders
     };
   };
 
   const billingData = calculateBilling();
-
-  // Print all delivered orders labels
-  const handlePrintAllLabels = () => {
-    const ordersArray = Array.isArray(orders) ? orders : [];
-    const deliveredOrders = ordersArray.filter((order: any) => order.status === 'delivered');
-    
-    if (deliveredOrders.length === 0) {
-      return;
-    }
-
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>All Shipping Labels - ${deliveredOrders.length} Orders</title>
-            <style>
-              body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-              .page-break { page-break-after: always; }
-              .label-container { margin: 20px; display: flex; justify-content: center; }
-              @media print {
-                body { margin: 0; padding: 0; }
-                .page-break:last-child { page-break-after: avoid; }
-              }
-            </style>
-          </head>
-          <body>
-            ${deliveredOrders.map((order: any, index: number) => `
-              <div class="label-container ${index < deliveredOrders.length - 1 ? 'page-break' : ''}">
-                <div style="text-align: center;">
-                  <h2>Order: ${order.orderNumber}</h2>
-                  <p>Customer: ${order.customerName}</p>
-                  <p>Address: ${order.deliveryLine1}, ${order.deliveryCity}, ${order.deliveryState} ${order.deliveryZip}</p>
-                  <p>Weight: ${order.weight || 0} lbs | Distance: ${order.distance || 0} mi</p>
-                </div>
-              </div>
-            `).join('')}
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,19 +96,11 @@ export default function ClientOrders() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="pending" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending" className="flex items-center space-x-2">
+        <Tabs defaultValue="orders" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="orders" className="flex items-center space-x-2">
               <Package className="h-4 w-4" />
-              <span>Pending</span>
-            </TabsTrigger>
-            <TabsTrigger value="voided" className="flex items-center space-x-2">
-              <X className="h-4 w-4" />
-              <span>Voided</span>
-            </TabsTrigger>
-            <TabsTrigger value="delivered" className="flex items-center space-x-2">
-              <Check className="h-4 w-4" />
-              <span>Delivered</span>
+              <span>Orders</span>
             </TabsTrigger>
             <TabsTrigger value="billing" className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4" />
@@ -172,8 +108,8 @@ export default function ClientOrders() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Pending Orders Tab */}
-          <TabsContent value="pending" className="space-y-6">
+          {/* Orders Tab */}
+          <TabsContent value="orders" className="space-y-6">
             {/* Quick Actions */}
             <Card>
               <CardHeader>
@@ -196,56 +132,16 @@ export default function ClientOrders() {
               </CardContent>
             </Card>
 
-            {/* Pending Orders Table */}
+            {/* Orders Table */}
             <Card>
               <CardHeader>
-                <CardTitle>Pending Orders</CardTitle>
+                <CardTitle>Orders</CardTitle>
                 <CardDescription>
-                  Orders awaiting pickup or processing
+                  All your delivery orders in one place
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <OrdersTable showFilters={true} statusFilter="pending" />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Voided Orders Tab */}
-          <TabsContent value="voided" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Voided Orders</CardTitle>
-                <CardDescription>
-                  Orders that have been voided or cancelled
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <OrdersTable showFilters={true} statusFilter="voided" />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Delivered Orders Tab */}
-          <TabsContent value="delivered" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Delivered Orders</CardTitle>
-                  <CardDescription>
-                    Successfully completed deliveries
-                  </CardDescription>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="flex items-center space-x-2"
-                  onClick={handlePrintAllLabels}
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>Print All Labels</span>
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                <OrdersTable showFilters={true} statusFilter="delivered" />
+                <OrdersTable showFilters={true} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -271,7 +167,7 @@ export default function ClientOrders() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{Number(billingData?.totalWeight || 0).toFixed(1)} lbs</div>
+                  <div className="text-2xl font-bold">{billingData.totalWeight.toFixed(1)} lbs</div>
                   <p className="text-xs text-muted-foreground">@$0.75 per pound</p>
                 </CardContent>
               </Card>
@@ -282,7 +178,7 @@ export default function ClientOrders() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{Number(billingData?.totalDistance || 0).toFixed(1)} mi</div>
+                  <div className="text-2xl font-bold">{billingData.totalDistance.toFixed(1)} mi</div>
                   <p className="text-xs text-muted-foreground">@$0.025 per mile</p>
                 </CardContent>
               </Card>
@@ -293,7 +189,7 @@ export default function ClientOrders() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${Number(billingData?.totalCharges || 0).toFixed(2)}</div>
+                  <div className="text-2xl font-bold">${billingData.totalCharges.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">Current billing period</p>
                 </CardContent>
               </Card>
@@ -331,18 +227,16 @@ export default function ClientOrders() {
                   </TableHeader>
                   <TableBody>
                     {billingData.deliveredOrders.map((order: any) => {
-                      const weight = parseFloat(order.weight) || 0;
-                      const distance = parseFloat(order.distance) || 0;
-                      const weightCharge = weight * 0.75;
-                      const distanceCharge = distance * 0.025;
+                      const weightCharge = (order.weight || 0) * 0.75;
+                      const distanceCharge = (order.distance || 0) * 0.025;
                       const total = weightCharge + distanceCharge;
                       
                       return (
                         <TableRow key={order.id}>
                           <TableCell className="font-medium">{order.orderNumber}</TableCell>
                           <TableCell>{order.customerName}</TableCell>
-                          <TableCell>{weight.toFixed(1)}</TableCell>
-                          <TableCell>{distance.toFixed(1)}</TableCell>
+                          <TableCell>{(order.weight || 0).toFixed(1)}</TableCell>
+                          <TableCell>{(order.distance || 0).toFixed(1)}</TableCell>
                           <TableCell>${weightCharge.toFixed(2)}</TableCell>
                           <TableCell>${distanceCharge.toFixed(2)}</TableCell>
                           <TableCell className="font-medium">${total.toFixed(2)}</TableCell>

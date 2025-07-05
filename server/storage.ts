@@ -460,23 +460,15 @@ export class DatabaseStorage implements IStorage {
 
   // Additional methods for multi-tenant route optimization
   async getOrdersForClient(clientId: number, filters?: any): Promise<Order[]> {
-    console.log(`[DEBUG] getOrdersForClient called with clientId: ${clientId}, filters:`, filters);
-    
-    if (filters?.status && filters.status !== 'all') {
-      console.log(`[DEBUG] Filtering by status: ${filters.status}`);
-      const result = await db.select().from(orders)
+    if (filters?.status) {
+      return await db.select().from(orders)
         .where(and(eq(orders.clientId, clientId), eq(orders.status, filters.status)))
         .orderBy(desc(orders.createdAt));
-      console.log(`[DEBUG] Found ${result.length} orders with status ${filters.status}`);
-      return result;
     }
     
-    console.log(`[DEBUG] Getting all orders for client ${clientId}`);
-    const result = await db.select().from(orders)
+    return await db.select().from(orders)
       .where(eq(orders.clientId, clientId))
       .orderBy(desc(orders.createdAt));
-    console.log(`[DEBUG] Found ${result.length} total orders for client`);
-    return result;
   }
 
   async voidOrder(orderId: number, voidData: VoidOrder, voidedBy: string): Promise<Order> {

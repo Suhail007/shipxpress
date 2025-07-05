@@ -87,9 +87,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     }
   }, [toast]);
 
-
-
-  // Simple distance calculation using Haversine formula (fallback)
+  // Simple distance calculation using Haversine formula
   const calculateStraightLineDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 3959; // Earth's radius in miles
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -174,54 +172,10 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
   const deliveryState = watchedValues.deliveryState || "";
   const deliveryZip = watchedValues.deliveryZip || "";
 
-  // Real-time distance calculation using Google Maps Distance Matrix API
-  const calculateRealTimeDistance = useCallback(async (destinationLat: number, destinationLng: number) => {
-    try {
-      const pickup = clientLocation 
-        ? `${clientLocation.lat},${clientLocation.lng}`
-        : "1049 Industrial Dr, Bensenville, IL 60106";
-      const delivery = `${destinationLat},${destinationLng}`;
-      
-      const response = await fetch('/api/calculate-distance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pickup, delivery })
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const distance = data.distance || 25;
-        setEstimatedDistance(distance);
-        
-        // Update cost estimate immediately
-        const totalWeight = packages.reduce((sum, pkg) => sum + (Number(pkg?.weight) || 0), 0);
-        const weightCost = totalWeight * 0.75;
-        const distanceCost = distance * 0.025;
-        const total = weightCost + distanceCost;
-        
-        setCostEstimate({
-          weight: totalWeight,
-          distance: distance,
-          total: total
-        });
-      }
-    } catch (error) {
-      console.warn('Real-time distance calculation failed:', error);
-      // Fallback to straight-line distance
-      const fallbackDistance = calculateStraightLineDistance(
-        clientLocation?.lat || 41.96, 
-        clientLocation?.lng || -87.93,
-        destinationLat, 
-        destinationLng
-      );
-      setEstimatedDistance(Math.round(fallbackDistance));
-    }
-  }, [clientLocation, packages, calculateStraightLineDistance]);
-
   // Calculate total weight from packages in real-time
   useEffect(() => {
     const totalWeight = packages.reduce((sum, pkg) => {
-      return sum + (Number(pkg?.weight) || 0);
+      return sum + (pkg?.weight || 0);
     }, 0);
     
     const weightCost = totalWeight * 0.75;
@@ -274,85 +228,71 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
       );
 
       autocompleteRef.current.addListener('place_changed', () => {
-        console.log('Google Places: place_changed event fired');
         const place = autocompleteRef.current?.getPlace();
-        console.log('Google Places: selected place:', place);
-        
-        if (place && place.address_components) {
+        if (place && place.formatted_address) {
           let street = '';
           let city = '';
           let state = '';
           let zip = '';
 
-          place.address_components.forEach((component: any) => {
-            const types = component.types;
-            if (types.includes('street_number')) {
-              street = component.long_name + ' ';
-            } else if (types.includes('route')) {
-              street += component.long_name;
-            } else if (types.includes('locality')) {
-              city = component.long_name;
-            } else if (types.includes('administrative_area_level_1')) {
-              state = component.short_name;
-            } else if (types.includes('postal_code')) {
-              zip = component.long_name;
-            }
-          });
-
-          // Update form values with proper options to trigger updates
-          const streetAddress = street.trim();
-          console.log('Setting form values:', { streetAddress, city, state, zip });
-          
-          // Use setTimeout to ensure proper DOM updates
-          setTimeout(() => {
-            form.setValue('deliveryLine1', streetAddress, { 
-              shouldValidate: true, 
-              shouldDirty: true, 
-              shouldTouch: true 
+          if (place.address_components) {
+            place.address_components.forEach((component: any) => {
+              const types = component.types;
+              if (types.includes('street_number')) {
+                street = component.long_name + ' ';
+              } else if (types.includes('route')) {
+                street += component.long_name;
+              } else if (types.includes('locality')) {
+                city = component.long_name;
+              } else if (types.includes('administrative_area_level_1')) {
+                state = component.short_name;
+              } else if (types.includes('postal_code')) {
+                zip = component.long_name;
+              }
             });
-            form.setValue('deliveryCity', city, { 
-              shouldValidate: true, 
-              shouldDirty: true, 
-              shouldTouch: true 
-            });
-            form.setValue('deliveryState', state, { 
-              shouldValidate: true, 
-              shouldDirty: true, 
-              shouldTouch: true 
-            });
-            form.setValue('deliveryZip', zip, { 
-              shouldValidate: true, 
-              shouldDirty: true, 
-              shouldTouch: true 
-            });
+          }
 
-            // Force update the input field value and trigger React events
-            if (addressInputRef.current) {
-              const input = addressInputRef.current;
-              input.value = streetAddress;
-              
-              // Create and dispatch events to ensure React Hook Form detects changes
-              const inputEvent = new Event('input', { bubbles: true });
-              const changeEvent = new Event('change', { bubbles: true });
-              
-              input.dispatchEvent(inputEvent);
-              input.dispatchEvent(changeEvent);
-            }
+          // Update form values immediately and trigger validation
+          form.setValue('deliveryLine1', street.trim(), { shouldValidate: true, shouldDirty: true });
+          form.setValue('deliveryCity', city, { shouldValidate: true, shouldDirty: true });
+          form.setValue('deliveryState', state, { shouldValidate: true, shouldDirty: true });
+          form.setValue('deliveryZip', zip, { shouldValidate: true, shouldDirty: true });
 
-            // Force form to re-validate and update
-            form.trigger();
-          }, 50);
+          // Force form re-render
+          form.trigger(['deliveryLine1', 'deliveryCity', 'deliveryState', 'deliveryZip']);
 
-          // Calculate distance immediately if we have coordinates
+          // Calculate distance if we have coordinates
           if (place.geometry && place.geometry.location) {
-            const lat = typeof place.geometry.location.lat === 'function' 
+            const destinationLat = typeof place.geometry.location.lat === 'function' 
               ? place.geometry.location.lat() 
               : place.geometry.location.lat;
-            const lng = typeof place.geometry.location.lng === 'function' 
+            const destinationLng = typeof place.geometry.location.lng === 'function' 
               ? place.geometry.location.lng() 
               : place.geometry.location.lng;
             
-            calculateRealTimeDistance(lat, lng);
+            if (clientLocation) {
+              const distance = calculateStraightLineDistance(
+                clientLocation.lat,
+                clientLocation.lng,
+                destinationLat,
+                destinationLng
+              );
+              setCostEstimate(prev => ({
+                ...prev,
+                distance: Math.round(distance)
+              }));
+            } else {
+              // Use default pickup location (Bensenville, IL)
+              const distance = calculateStraightLineDistance(
+                41.96, -87.93,
+                destinationLat,
+                destinationLng
+              );
+              setCostEstimate(prev => ({
+                ...prev,
+                distance: Math.round(distance)
+              }));
+            }
           }
 
           // Blur the input to dismiss the dropdown
@@ -366,7 +306,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     if (open) {
       loadGoogleMaps();
     }
-  }, [open, form, calculateRealTimeDistance]);
+  }, [open, form]);
 
   // Get location when modal opens
   useEffect(() => {
@@ -414,26 +354,8 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     },
   });
 
-  const onSubmit = async (data: CreateOrderForm) => {
-    // Calculate final distance for accurate billing
-    const finalDistance = await calculateDistance(
-      data.deliveryLine1,
-      data.deliveryCity,
-      data.deliveryState,
-      data.deliveryZip
-    );
-
-    // Calculate total weight from packages
-    const totalWeight = data.packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0);
-
-    // Include weight and distance in the order data for billing
-    const orderData = {
-      ...data,
-      weight: totalWeight,
-      distance: finalDistance
-    };
-
-    createOrderMutation.mutate(orderData);
+  const onSubmit = (data: CreateOrderForm) => {
+    createOrderMutation.mutate(data);
   };
 
   const addPackage = () => {
@@ -524,7 +446,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                             value={field.value}
                             onChange={(e) => {
                               field.onChange(e);
-                              // Clear autocomplete selection when user types manually
+                              // Reset autocomplete when user types manually
                               if (autocompleteRef.current) {
                                 autocompleteRef.current.set('place', null);
                               }
