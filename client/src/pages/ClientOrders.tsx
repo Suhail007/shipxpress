@@ -235,8 +235,8 @@ export default function ClientOrders() {
                         <TableRow key={order.id}>
                           <TableCell className="font-medium">{order.orderNumber}</TableCell>
                           <TableCell>{order.customerName}</TableCell>
-                          <TableCell>{(order.weight || 0).toFixed(1)}</TableCell>
-                          <TableCell>{(order.distance || 0).toFixed(1)}</TableCell>
+                          <TableCell>{Number(order.weight || 0).toFixed(1)}</TableCell>
+                          <TableCell>{Number(order.distance || 0).toFixed(1)}</TableCell>
                           <TableCell>${weightCharge.toFixed(2)}</TableCell>
                           <TableCell>${distanceCharge.toFixed(2)}</TableCell>
                           <TableCell className="font-medium">${total.toFixed(2)}</TableCell>
