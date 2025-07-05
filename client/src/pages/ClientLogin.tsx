@@ -44,11 +44,7 @@ export default function ClientLogin() {
         description: `Welcome back, ${data.client.name}!`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
-      // Force a page reload to refresh the authentication state
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1000);
+      // Redirect will be handled by the App component
     },
     onError: (error) => {
       toast({
@@ -91,10 +87,10 @@ export default function ClientLogin() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username or Email</FormLabel>
+                      <FormLabel>Username</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Enter your username or email" 
+                          placeholder="Enter your username" 
                           {...field} 
                           autoComplete="username"
                         />
@@ -148,25 +144,21 @@ export default function ClientLogin() {
               {showCredentials && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg text-sm">
                   <h4 className="font-medium text-blue-900 mb-2">Demo Client Accounts:</h4>
-                  <p className="text-blue-700 mb-3 text-xs">You can login with either username or email address</p>
-                  <div className="space-y-3 text-blue-800">
+                  <div className="space-y-2 text-blue-800">
                     <div>
                       <strong>American Distributors LLC:</strong><br />
                       Username: american_dist<br />
-                      Email: admin@americandistributors.com<br />
                       Password: password123
                     </div>
                     <div>
                       <strong>Midwest Supply Co:</strong><br />
                       Username: midwest_supply<br />
-                      Email: orders@midwestsupply.com<br />
-                      Password: logistics456
+                      Password: password123
                     </div>
                     <div>
                       <strong>Great Lakes Logistics:</strong><br />
-                      Username: greatlakes<br />
-                      Email: dispatch@greatlakeslogistics.com<br />
-                      Password: shipping789
+                      Username: greatlakes_logistics<br />
+                      Password: password123
                     </div>
                   </div>
                 </div>

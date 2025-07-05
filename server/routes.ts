@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertOrderSchema, insertCustomerSchema, insertDriverSchema, updateOrderStatusSchema } from "@shared/schema";
 import { z } from "zod";
-import { sendOrderStatusNotification } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -13,17 +12,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const sessionUser = req.user;
-      
-      // Handle client sessions
-      if (sessionUser.client) {
-        const userId = sessionUser.claims.sub;
-        const user = await storage.getUser(userId);
-        return res.json({ ...user, client: sessionUser.client });
-      }
-      
-      // Handle OAuth sessions
-      const userId = sessionUser.claims.sub;
+      const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       
       // Get driver info if user is a driver
@@ -37,13 +26,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
-  });
-
-  // Google Maps API configuration
-  app.get("/api/config/google-maps-key", (req, res) => {
-    res.json({ 
-      apiKey: process.env.GOOGLE_MAPS_API_KEY || '' 
-    });
   });
 
   // Distance calculation using Google Maps API
@@ -203,16 +185,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const order = await storage.updateOrderStatus(orderId, statusUpdate, userId);
       
-      // Send email notification if customer email is available
-      if (order.customerEmail) {
-        try {
-          await sendOrderStatusNotification(order, statusUpdate.status, order.customerEmail);
-        } catch (emailError) {
-          console.error("Failed to send email notification:", emailError);
-          // Don't fail the request if email fails
-        }
-      }
-      
       // Log activity
       await storage.logActivity(
         userId,
@@ -245,16 +217,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedOrder = await storage.updateOrderStatus(order.id, statusUpdate, userId);
-      
-      // Send email notification if customer email is available
-      if (updatedOrder.customerEmail) {
-        try {
-          await sendOrderStatusNotification(updatedOrder, statusUpdate.status, updatedOrder.customerEmail);
-        } catch (emailError) {
-          console.error("Failed to send email notification:", emailError);
-          // Don't fail the request if email fails
-        }
-      }
       
       // Log activity
       await storage.logActivity(
@@ -550,18 +512,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Set up session similar to OAuth flow
-      const sessionUser = { claims: { sub: user.id }, client };
-      req.login(sessionUser, (err) => {
+      req.login({ claims: { sub: user.id }, client }, (err) => {
         if (err) {
-          console.error('Session error:', err);
           return res.status(500).json({ message: 'Session error' });
         }
-        
-        // Store user in session
-        req.session.passport = { user: sessionUser };
-        req.session.save(() => {
-          res.json({ user, client });
-        });
+        res.json({ user, client });
       });
       
     } catch (error) {
@@ -655,40 +610,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error voiding order:", error);
       res.status(500).json({ message: "Failed to void order" });
-    }
-  });
-
-  // Public order tracking endpoint (no authentication required)
-  app.get("/api/orders/track/:orderNumber", async (req, res) => {
-    try {
-      const { orderNumber } = req.params;
-      console.log(`[TRACK] Tracking order: ${orderNumber}`);
-      
-      const order = await storage.getOrderByNumber(orderNumber);
-      
-      if (!order) {
-        return res.status(404).json({ message: "Order not found" });
-      }
-      
-      // Return order details for tracking
-      res.json({
-        orderNumber: order.orderNumber,
-        status: order.status,
-        customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        deliveryLine1: order.deliveryLine1,
-        deliveryCity: order.deliveryCity,
-        deliveryState: order.deliveryState,
-        deliveryZip: order.deliveryZip,
-        weight: order.weight,
-        distance: order.distance,
-        pickupDate: order.pickupDate,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      });
-    } catch (error) {
-      console.error("Error tracking order:", error);
-      res.status(500).json({ message: "Failed to track order" });
     }
   });
 

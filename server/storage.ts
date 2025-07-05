@@ -105,8 +105,8 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-    return result[0];
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -131,28 +131,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClient(id: number): Promise<Client | undefined> {
-    const result = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
-    return result[0];
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client;
   }
 
   async getClientByCredentials(username: string, password: string): Promise<Client | undefined> {
-    const result = await db.select().from(clients)
-      .where(and(
-        or(
-          eq(clients.username, username),
-          eq(clients.contactEmail, username)
-        ),
-        eq(clients.password, password)
-      )).limit(1);
-    return result[0];
+    const [client] = await db.select().from(clients).where(
+      and(
+        eq(clients.loginUsername, username),
+        eq(clients.loginPassword, password)
+      )
+    );
+    return client;
   }
 
   async getAllClients(): Promise<Client[]> {
-    return await db.select().from(clients);
+    return await db.select().from(clients).where(eq(clients.isActive, true)).orderBy(clients.name);
   }
 
   async updateClient(id: number, updates: Partial<InsertClient>): Promise<Client> {
-    const [client] = await db.update(clients).set(updates).where(eq(clients.id, id)).returning();
+    const [client] = await db
+      .update(clients)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(clients.id, id))
+      .returning();
     return client;
   }
 
@@ -163,65 +165,70 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getZone(id: number): Promise<Zone | undefined> {
-    const result = await db.select().from(zones).where(eq(zones.id, id)).limit(1);
-    return result[0];
-  }
-
-  async getAllZones(): Promise<Zone[]> {
-    return await db.select().from(zones);
-  }
-
-  async updateZone(id: number, updates: Partial<InsertZone>): Promise<Zone> {
-    const [zone] = await db.update(zones).set(updates).where(eq(zones.id, id)).returning();
+    const [zone] = await db.select().from(zones).where(eq(zones.id, id));
     return zone;
   }
 
-  // Driver operations
+  async getAllZones(): Promise<Zone[]> {
+    return await db.select().from(zones).where(eq(zones.isActive, true)).orderBy(zones.name);
+  }
+
+  async updateZone(id: number, updates: Partial<InsertZone>): Promise<Zone> {
+    const [zone] = await db
+      .update(zones)
+      .set(updates)
+      .where(eq(zones.id, id))
+      .returning();
+    return zone;
+  }
+
   async createDriver(driverData: InsertDriver): Promise<Driver> {
-    const [driver] = await db.insert(drivers).values(driverData).returning();
+    const [driver] = await db
+      .insert(drivers)
+      .values(driverData)
+      .returning();
     return driver;
   }
 
   async getDriver(id: number): Promise<Driver | undefined> {
-    const result = await db.select().from(drivers).where(eq(drivers.id, id)).limit(1);
-    return result[0];
+    const [driver] = await db.select().from(drivers).where(eq(drivers.id, id));
+    return driver;
   }
 
   async getDriverByUserId(userId: string): Promise<Driver | undefined> {
-    const result = await db.select().from(drivers).where(eq(drivers.userId, userId)).limit(1);
-    return result[0];
+    const [driver] = await db.select().from(drivers).where(eq(drivers.userId, userId));
+    return driver;
   }
 
   async getAllDrivers(): Promise<Driver[]> {
-    return await db.select().from(drivers);
+    return await db.select().from(drivers).orderBy(desc(drivers.createdAt));
   }
 
   async updateDriverStatus(id: number, status: string, location?: any): Promise<Driver> {
-    const updateData: any = {
-      status,
-      updatedAt: new Date(),
-    };
-    
-    if (location) {
-      updateData.currentLocation = location;
-    }
-
-    const [driver] = await db.update(drivers).set(updateData).where(eq(drivers.id, id)).returning();
+    const [driver] = await db
+      .update(drivers)
+      .set({
+        status,
+        location,
+        updatedAt: new Date(),
+      })
+      .where(eq(drivers.id, id))
+      .returning();
     return driver;
   }
 
   async getAvailableDrivers(): Promise<Driver[]> {
-    return await db.select().from(drivers)
-      .where(and(
-        eq(drivers.status, "online"),
-        eq(drivers.isActive, true)
-      ));
+    return await db
+      .select()
+      .from(drivers)
+      .where(and(eq(drivers.isAvailable, true), eq(drivers.status, "online")));
   }
 
   async assignDriverToZone(driverId: number, zoneId: number): Promise<Driver> {
-    const [driver] = await db.update(drivers)
+    const [driver] = await db
+      .update(drivers)
       .set({
-        zoneId: zoneId,
+        assignedZoneId: zoneId,
         updatedAt: new Date(),
       })
       .where(eq(drivers.id, driverId))
@@ -230,255 +237,367 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDriversByZone(zoneId: number): Promise<Driver[]> {
-    return await db.select().from(drivers).where(eq(drivers.zoneId, zoneId));
+    return await db.select().from(drivers).where(eq(drivers.assignedZoneId, zoneId));
   }
 
-  // Customer operations
   async createCustomer(customerData: InsertCustomer): Promise<Customer> {
-    const [customer] = await db.insert(customers).values(customerData).returning();
+    const [customer] = await db
+      .insert(customers)
+      .values(customerData)
+      .returning();
     return customer;
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {
-    const result = await db.select().from(customers).where(eq(customers.id, id)).limit(1);
-    return result[0];
+    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    return customer;
   }
 
   async getCustomerByPhone(phone: string): Promise<Customer | undefined> {
-    const result = await db.select().from(customers).where(eq(customers.phone, phone)).limit(1);
-    return result[0];
+    const [customer] = await db.select().from(customers).where(eq(customers.phone, phone));
+    return customer;
   }
 
-  // Order operations
   async createOrder(orderData: InsertOrder): Promise<Order> {
     // Generate order number
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const orderNumber = `ORD-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
     
-    const insertData = {
-      ...orderData,
-      orderNumber,
-      pickupDate: orderData.pickupDate,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const [order] = await db.insert(orders).values(insertData).returning();
+    // First create or find customer
+    let customer = await this.getCustomerByPhone(orderData.customerPhone);
+    if (!customer) {
+      customer = await this.createCustomer({
+        name: orderData.customerName,
+        phone: orderData.customerPhone,
+        email: orderData.customerEmail || null,
+      });
+    }
+    
+    const [order] = await db
+      .insert(orders)
+      .values({
+        orderNumber,
+        customerId: customer.id,
+        status: "pending",
+        deliveryLine1: orderData.deliveryLine1,
+        deliveryLine2: orderData.deliveryLine2,
+        deliveryCity: orderData.deliveryCity,
+        deliveryState: orderData.deliveryState,
+        deliveryZip: orderData.deliveryZip,
+        deliveryCountry: orderData.deliveryCountry,
+        packages: orderData.packages,
+        pickupDate: orderData.pickupDate,
+        specialInstructions: orderData.specialInstructions,
+        createdBy: orderData.createdBy,
+      })
+      .returning();
+    
     return order;
   }
 
   async getOrder(id: number): Promise<Order | undefined> {
-    const result = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
-    return result[0];
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order;
   }
 
   async getOrderByNumber(orderNumber: string): Promise<Order | undefined> {
-    const result = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber)).limit(1);
-    return result[0];
+    const [order] = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber));
+    return order;
   }
 
   async getAllOrders(filters?: any): Promise<Order[]> {
-    let query = db.select().from(orders);
-    
-    if (filters?.status) {
-      query = query.where(eq(orders.status, filters.status));
+    if (filters?.status && filters?.search) {
+      return await db
+        .select()
+        .from(orders)
+        .where(
+          and(
+            eq(orders.status, filters.status),
+            or(
+              like(orders.orderNumber, `%${filters.search}%`),
+              like(orders.deliveryLine1, `%${filters.search}%`),
+              like(orders.deliveryCity, `%${filters.search}%`)
+            )
+          )
+        )
+        .orderBy(desc(orders.createdAt));
     }
     
-    return query.orderBy(desc(orders.createdAt));
+    if (filters?.status && filters.status !== "all") {
+      return await db
+        .select()
+        .from(orders)
+        .where(eq(orders.status, filters.status))
+        .orderBy(desc(orders.createdAt));
+    }
+    
+    if (filters?.search) {
+      return await db
+        .select()
+        .from(orders)
+        .where(
+          or(
+            like(orders.orderNumber, `%${filters.search}%`),
+            like(orders.deliveryLine1, `%${filters.search}%`),
+            like(orders.deliveryCity, `%${filters.search}%`)
+          )
+        )
+        .orderBy(desc(orders.createdAt));
+    }
+    
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
   }
 
   async updateOrderStatus(orderId: number, statusUpdate: UpdateOrderStatus, updatedBy: string): Promise<Order> {
-    const updateData: any = {
-      status: statusUpdate.status,
-      updatedAt: new Date(),
-    };
-
-    // Add timestamp fields based on status
-    if (statusUpdate.status === "assigned") {
-      updateData.assignedAt = new Date();
-    } else if (statusUpdate.status === "in_transit") {
-      updateData.pickedUpAt = new Date();
-    } else if (statusUpdate.status === "delivered") {
-      updateData.actualDeliveryTime = new Date();
-    }
-
-    const [order] = await db.update(orders).set(updateData).where(eq(orders.id, orderId)).returning();
+    const [order] = await db
+      .update(orders)
+      .set({
+        status: statusUpdate.status,
+        updatedAt: new Date(),
+        ...(statusUpdate.status === "delivered" && { actualDeliveryTime: new Date() }),
+      })
+      .where(eq(orders.id, orderId))
+      .returning();
 
     // Add to status history
     await db.insert(orderStatusHistory).values({
-      orderId: orderId,
+      orderId,
       status: statusUpdate.status,
-      updatedBy: updatedBy,
       notes: statusUpdate.notes,
-      timestamp: new Date(),
+      location: statusUpdate.location,
+      updatedBy,
     });
 
     return order;
   }
 
   async assignOrderToDriver(orderId: number, driverId: number, assignedBy: string): Promise<Order> {
-    const [order] = await db.update(orders)
+    const [order] = await db
+      .update(orders)
       .set({
-        driverId: driverId,
+        driverId,
         status: "assigned",
-        assignedAt: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(orders.id, orderId))
       .returning();
+
+    // Add to status history
+    await db.insert(orderStatusHistory).values({
+      orderId,
+      status: "assigned",
+      notes: `Assigned to driver #${driverId}`,
+      updatedBy: assignedBy,
+    });
 
     return order;
   }
 
   async getOrdersForDriver(driverId: number, status?: string): Promise<Order[]> {
-    let whereClause = eq(orders.driverId, driverId);
-    
     if (status) {
-      whereClause = and(whereClause, eq(orders.status, status));
+      return await db
+        .select()
+        .from(orders)
+        .where(and(eq(orders.driverId, driverId), eq(orders.status, status)))
+        .orderBy(desc(orders.createdAt));
     }
     
-    return await db.select().from(orders).where(whereClause).orderBy(desc(orders.createdAt));
+    return await db
+      .select()
+      .from(orders)
+      .where(eq(orders.driverId, driverId))
+      .orderBy(desc(orders.createdAt));
   }
 
   async getOrderStatusHistory(orderId: number): Promise<OrderStatusHistory[]> {
-    return await db.select().from(orderStatusHistory)
+    return await db
+      .select()
+      .from(orderStatusHistory)
       .where(eq(orderStatusHistory.orderId, orderId))
       .orderBy(desc(orderStatusHistory.timestamp));
   }
 
   async logActivity(userId: string, action: string, description: string, metadata?: any): Promise<ActivityLog> {
-    const [activity] = await db.insert(activityLogs).values({
-      userId,
-      action,
-      description,
-      metadata,
-      timestamp: new Date(),
-    }).returning();
-
-    return activity;
+    const [log] = await db
+      .insert(activityLogs)
+      .values({
+        userId,
+        action,
+        description,
+        metadata,
+      })
+      .returning();
+    return log;
   }
 
   async getRecentActivity(limit = 20): Promise<ActivityLog[]> {
-    return await db.select().from(activityLogs)
+    return await db
+      .select()
+      .from(activityLogs)
       .orderBy(desc(activityLogs.timestamp))
       .limit(limit);
   }
 
   async getDashboardStats(): Promise<any> {
-    const totalOrders = await db.select({ count: sql<number>`count(*)` }).from(orders);
-    const pendingOrders = await db.select({ count: sql<number>`count(*)` }).from(orders)
-      .where(eq(orders.status, 'pending'));
-    const activeDrivers = await db.select({ count: sql<number>`count(*)` }).from(drivers)
-      .where(eq(drivers.status, 'online'));
+    const [totalOrders] = await db.select({ count: sql<number>`count(*)` }).from(orders);
+    const [pendingOrders] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.status, "pending"));
+    const [inTransitOrders] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.status, "in_transit"));
+    const [deliveredToday] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(
+      and(
+        eq(orders.status, "delivered"),
+        sql`DATE(actual_delivery_time) = CURRENT_DATE`
+      )
+    );
+    const [activeDrivers] = await db.select({ count: sql<number>`count(*)` }).from(drivers).where(eq(drivers.status, "online"));
 
     return {
-      totalOrders: totalOrders[0]?.count || 0,
-      pendingOrders: pendingOrders[0]?.count || 0,
-      activeDrivers: activeDrivers[0]?.count || 0,
+      totalOrders: totalOrders.count,
+      pendingOrders: pendingOrders.count,
+      inTransitOrders: inTransitOrders.count,
+      deliveredToday: deliveredToday.count,
+      activeDrivers: activeDrivers.count,
     };
   }
 
+  // Additional methods for multi-tenant route optimization
   async getOrdersForClient(clientId: number, filters?: any): Promise<Order[]> {
-    let whereClause = eq(orders.clientId, clientId);
+    console.log(`[DEBUG] getOrdersForClient called with clientId: ${clientId}, filters:`, filters);
     
-    if (filters?.status) {
-      whereClause = and(whereClause, eq(orders.status, filters.status));
+    if (filters?.status && filters.status !== 'all') {
+      console.log(`[DEBUG] Filtering by status: ${filters.status}`);
+      const result = await db.select().from(orders)
+        .where(and(eq(orders.clientId, clientId), eq(orders.status, filters.status)))
+        .orderBy(desc(orders.createdAt));
+      console.log(`[DEBUG] Found ${result.length} orders with status ${filters.status}`);
+      return result;
     }
     
-    return await db.select().from(orders).where(whereClause).orderBy(desc(orders.createdAt));
+    console.log(`[DEBUG] Getting all orders for client ${clientId}`);
+    const result = await db.select().from(orders)
+      .where(eq(orders.clientId, clientId))
+      .orderBy(desc(orders.createdAt));
+    console.log(`[DEBUG] Found ${result.length} total orders for client`);
+    return result;
   }
 
   async voidOrder(orderId: number, voidData: VoidOrder, voidedBy: string): Promise<Order> {
-    const [order] = await db.update(orders)
+    const [order] = await db
+      .update(orders)
       .set({
         status: "voided",
-        voidReason: voidData.voidReason,
         voidedAt: new Date(),
-        voidedBy: voidedBy,
+        voidedBy,
+        voidReason: voidData.reason,
         updatedAt: new Date(),
       })
       .where(eq(orders.id, orderId))
       .returning();
-
     return order;
   }
 
+  // Route batch operations
   async createRouteBatch(batchData: InsertRouteBatch): Promise<RouteBatch> {
     const [batch] = await db.insert(routeBatches).values(batchData).returning();
     return batch;
   }
 
   async getCurrentBatch(date: string): Promise<RouteBatch | undefined> {
-    const result = await db.select().from(routeBatches)
-      .where(eq(routeBatches.date, date))
-      .limit(1);
-    return result[0];
+    const [batch] = await db.select().from(routeBatches).where(eq(routeBatches.batchDate, date));
+    return batch;
   }
 
   async getRouteBatch(id: number): Promise<RouteBatch | undefined> {
-    const result = await db.select().from(routeBatches).where(eq(routeBatches.id, id)).limit(1);
-    return result[0];
+    const [batch] = await db.select().from(routeBatches).where(eq(routeBatches.id, id));
+    return batch;
   }
 
   async addOrderToBatch(orderId: number, batchId: number): Promise<void> {
-    await db.update(orders)
-      .set({ batchId: batchId })
+    await db
+      .update(orders)
+      .set({ batchId, updatedAt: new Date() })
       .where(eq(orders.id, orderId));
   }
 
   async optimizeBatch(batchId: number): Promise<OptimizedRoute[]> {
     // Get all orders for this batch
-    const batchOrders = await db.select().from(orders)
-      .where(eq(orders.batchId, batchId));
-
-    // Group orders by zone
-    const ordersByZone = new Map();
+    const batchOrders = await db.select().from(orders).where(eq(orders.batchId, batchId));
+    
+    // Group orders by zones based on delivery state
+    const zoneGroups = new Map<number, any[]>();
+    
     for (const order of batchOrders) {
-      if (!order.zoneId) continue;
-      
-      if (!ordersByZone.has(order.zoneId)) {
-        ordersByZone.set(order.zoneId, []);
+      const zone = this.determineZone(order.deliveryState || "", order.deliveryCoordinates);
+      if (!zoneGroups.has(zone)) {
+        zoneGroups.set(zone, []);
       }
-      ordersByZone.get(order.zoneId).push(order);
+      zoneGroups.get(zone)?.push(order);
     }
 
-    // Create optimized routes for each zone
-    const routes = [];
-    for (const [zoneId, zoneOrders] of ordersByZone) {
-      const [route] = await db.insert(optimizedRoutes).values({
-        batchId,
-        zoneId,
-        routeData: zoneOrders,
-        estimatedDistance: "50", // Placeholder calculation
-        estimatedTime: zoneOrders.length * 30, // 30 min per order
-        createdAt: new Date(),
-      }).returning();
-      
-      routes.push(route);
+    const optimizedRoutes: OptimizedRoute[] = [];
+    
+    for (const [zoneId, zoneOrders] of zoneGroups.entries()) {
+      const routeData = {
+        orders: zoneOrders.map((order: any, index: number) => ({
+          orderId: order.id,
+          sequence: index + 1,
+          address: `${order.deliveryLine1}, ${order.deliveryCity}, ${order.deliveryState} ${order.deliveryZip}`,
+        })),
+      };
+
+      const [route] = await db
+        .insert(optimizedRoutes)
+        .values({
+          batchId,
+          zoneId,
+          routeData,
+          estimatedDistance: (zoneOrders.length * 15).toString(),
+          estimatedTime: zoneOrders.length * 30,
+        })
+        .returning();
+
+      optimizedRoutes.push(route);
+
+      // Update orders with zone and route sequence
+      for (let i = 0; i < zoneOrders.length; i++) {
+        await db
+          .update(orders)
+          .set({ zoneId, routeSequence: i + 1 })
+          .where(eq(orders.id, zoneOrders[i].id));
+      }
     }
 
-    return routes;
+    // Mark batch as optimized
+    await db
+      .update(routeBatches)
+      .set({ status: "optimized", optimizedAt: new Date() })
+      .where(eq(routeBatches.id, batchId));
+
+    return optimizedRoutes;
   }
 
   private determineZone(state: string, coordinates?: any): number {
-    // Simple zone determination logic based on state
-    const northStates = ['WI', 'MI', 'MN', 'ND', 'SD'];
-    const southStates = ['TX', 'FL', 'GA', 'AL', 'MS', 'LA', 'SC', 'NC', 'TN', 'KY'];
-    const eastStates = ['NY', 'NJ', 'PA', 'CT', 'MA', 'VT', 'NH', 'ME', 'RI'];
+    // Simplified zone determination - in production, this would use proper geolocation
+    const northStates = ["IL", "WI", "MN", "IA", "IN", "MI", "OH"];
+    const southStates = ["TX", "FL", "GA", "NC", "SC", "TN", "AL", "MS", "LA", "AR"];
+    const eastStates = ["NY", "PA", "NJ", "CT", "MA", "RI", "VT", "NH", "ME", "MD", "DE", "VA", "WV"];
+    const westStates = ["CA", "NV", "AZ", "UT", "CO", "NM", "WY", "MT", "ID", "WA", "OR"];
+
+    if (northStates.includes(state)) return 1; // Zone A - North
+    if (southStates.includes(state)) return 2; // Zone B - South  
+    if (eastStates.includes(state)) return 3; // Zone C - East
+    if (westStates.includes(state)) return 4; // Zone D - West
     
-    if (northStates.includes(state)) return 1; // North zone
-    if (southStates.includes(state)) return 2; // South zone  
-    if (eastStates.includes(state)) return 3; // East zone
-    return 4; // West zone (default)
+    return 1; // Default to Zone A
   }
 
+  // Optimized route operations
   async createOptimizedRoute(routeData: InsertOptimizedRoute): Promise<OptimizedRoute> {
     const [route] = await db.insert(optimizedRoutes).values(routeData).returning();
     return route;
   }
 
   async getOptimizedRoute(id: number): Promise<OptimizedRoute | undefined> {
-    const result = await db.select().from(optimizedRoutes).where(eq(optimizedRoutes.id, id)).limit(1);
-    return result[0];
+    const [route] = await db.select().from(optimizedRoutes).where(eq(optimizedRoutes.id, id));
+    return route;
   }
 
   async getRoutesByBatch(batchId: number): Promise<OptimizedRoute[]> {
@@ -486,44 +605,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async assignRouteToDriver(routeId: number, driverId: number): Promise<OptimizedRoute> {
-    const [route] = await db.update(optimizedRoutes)
+    const [route] = await db
+      .update(optimizedRoutes)
       .set({
-        driverId: driverId,
+        driverId,
         status: "assigned",
         assignedAt: new Date(),
       })
       .where(eq(optimizedRoutes.id, routeId))
       .returning();
-
     return route;
   }
 
+  // Super admin and client-specific stats
   async getSuperAdminStats(): Promise<any> {
-    const totalClients = await db.select({ count: sql<number>`count(*)` }).from(clients);
-    const totalDrivers = await db.select({ count: sql<number>`count(*)` }).from(drivers);
-    const totalZones = await db.select({ count: sql<number>`count(*)` }).from(zones);
-    const totalOrders = await db.select({ count: sql<number>`count(*)` }).from(orders);
-
+    const [totalClients] = await db.select({ count: sql<number>`count(*)` }).from(clients);
+    const [totalDrivers] = await db.select({ count: sql<number>`count(*)` }).from(drivers);
+    const [totalZones] = await db.select({ count: sql<number>`count(*)` }).from(zones);
+    const [todayBatches] = await db.select({ count: sql<number>`count(*)` }).from(routeBatches).where(sql`DATE(batch_date) = CURRENT_DATE`);
+    
     return {
-      totalClients: totalClients[0]?.count || 0,
-      totalDrivers: totalDrivers[0]?.count || 0,
-      totalZones: totalZones[0]?.count || 0,
-      totalOrders: totalOrders[0]?.count || 0,
+      totalClients: totalClients.count,
+      totalDrivers: totalDrivers.count,
+      totalZones: totalZones.count,
+      todayBatches: todayBatches.count,
     };
   }
 
   async getClientStats(clientId: number): Promise<any> {
-    const totalOrders = await db.select({ count: sql<number>`count(*)` }).from(orders)
-      .where(eq(orders.clientId, clientId));
-    const pendingOrders = await db.select({ count: sql<number>`count(*)` }).from(orders)
-      .where(and(eq(orders.clientId, clientId), eq(orders.status, 'pending')));
-    const deliveredOrders = await db.select({ count: sql<number>`count(*)` }).from(orders)
-      .where(and(eq(orders.clientId, clientId), eq(orders.status, 'delivered')));
-
+    const [totalOrders] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(eq(orders.clientId, clientId));
+    const [pendingOrders] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(and(eq(orders.clientId, clientId), eq(orders.status, "pending")));
+    const [deliveredOrders] = await db.select({ count: sql<number>`count(*)` }).from(orders).where(and(eq(orders.clientId, clientId), eq(orders.status, "delivered")));
+    
     return {
-      totalOrders: totalOrders[0]?.count || 0,
-      pendingOrders: pendingOrders[0]?.count || 0,
-      deliveredOrders: deliveredOrders[0]?.count || 0,
+      totalOrders: totalOrders.count,
+      pendingOrders: pendingOrders.count,
+      deliveredOrders: deliveredOrders.count,
     };
   }
 }

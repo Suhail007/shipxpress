@@ -3,23 +3,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <script>
-      window.initGoogleMaps = function() {
-        fetch('/api/config/google-maps-key')
-          .then(response => response.json())
-          .then(data => {
-            if (data.apiKey) {
-              const script = document.createElement('script');
-              script.src = `https://maps.googleapis.com/maps/api/js?key=${data.apiKey}&libraries=places`;
-              script.async = true;
-              script.defer = true;
-              document.head.appendChild(script);
-            }
-          })
-          .catch(console.error);
-      };
-      window.initGoogleMaps();
-    </script>
   </head>
   <body>
     <div id="root"></div>

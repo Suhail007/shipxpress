@@ -23,11 +23,11 @@ The application follows a monorepo structure with shared code between client and
 
 ## Key Components
 
-### Database Layer (Drizzle + MySQL)
-- **ORM**: Drizzle with MySQL2 connection pool
+### Database Layer (Drizzle + PostgreSQL)
+- **ORM**: Drizzle with Neon serverless PostgreSQL
 - **Schema Management**: Type-safe schema definitions in `shared/schema.ts`
 - **Core Entities**: Users, Drivers, Orders, Customers, Order Status History, Activity Logs
-- **Session Storage**: MySQL-based session management for authentication
+- **Session Storage**: PostgreSQL-based session management for authentication
 
 ### Authentication & Authorization
 - **Provider**: Replit OpenID Connect integration
@@ -97,58 +97,11 @@ The application follows a monorepo structure with shared code between client and
 - **Authentication**: Replit OIDC in development mode
 
 ### Environment Configuration
-- **Database**: `DATABASE_URL` for MySQL connection (format: mysql://user:password@host:port/database)
+- **Database**: `DATABASE_URL` for PostgreSQL connection
 - **Authentication**: `SESSION_SECRET`, `ISSUER_URL`, `REPL_ID` for OIDC
 - **Security**: Secure cookies and HTTPS in production
 
-### MySQL Database Setup
-
-**Required Environment Variables:**
-```
-DATABASE_URL=mysql://username:password@hostname:3306/logistics
-SESSION_SECRET=your-session-secret-here
-```
-
-**Setup Steps:**
-
-1. **Create MySQL Database:**
-   - Set up a MySQL server (local, cloud, or hosted service)
-   - Create a database named 'logistics'
-   - Update the DATABASE_URL environment variable
-
-2. **Run Database Setup:**
-   ```bash
-   mysql -u username -p logistics < setup-mysql.sql
-   ```
-
-3. **Sample Data Included:**
-   - 3 sample clients with login credentials
-   - 4 delivery zones (North, South, East, West)
-   - Database structure with all required tables and relationships
-
-**MySQL Schema Features:**
-- AUTO_INCREMENT primary keys for efficient indexing
-- JSON data types for complex data storage
-- Foreign key constraints for data integrity
-- Optimized indexes for query performance
-- UTF8MB4 character set for full Unicode support
-
 ## Recent Changes
-- July 2, 2025: **ShippXpress Complete Rebranding** - Successfully rebranded LogiTrack to ShippXpress
-  - Integrated ship logo and created professional navy/orange color scheme
-  - Built comprehensive sidebar navigation with collapsible design and navigation icons
-  - Enhanced landing page with modern layout, statistics, and feature showcase
-  - Created new Super Admin dashboard with metric cards and improved layout
-  - Fixed client login system to accept both username and email authentication
-  - Updated all branding elements and CSS utilities for consistent ShippXpress theme
-  - Application now fully functional with professional ShippXpress design
-
-- July 2, 2025: **PostgreSQL Database Restoration** - Migrated back from MySQL to PostgreSQL
-  - Restored PostgreSQL connection using Replit's native database support
-  - Fixed schema compatibility issues and field mappings
-  - Resolved client authentication with proper email/username login support
-  - All database operations working correctly with PostgreSQL backend
-
 - June 30, 2025: Multi-tenant route optimization system implemented
   - Added client management with role-based access control
   - Implemented zone-based delivery system (A, B, C, D for North, South, East, West)
