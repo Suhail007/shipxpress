@@ -50,6 +50,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
+  const [selectedPlace, setSelectedPlace] = useState<any>(null);
 
   // Get client's current location
   const getCurrentLocation = useCallback(() => {
@@ -199,6 +200,40 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     }
   }, [deliveryAddress, deliveryCity, deliveryState, deliveryZip, calculateDistance]);
 
+  // Update form when place is selected from autocomplete
+  useEffect(() => {
+    if (selectedPlace && selectedPlace.address_components) {
+      let street = '';
+      let city = '';
+      let state = '';
+      let zip = '';
+
+      selectedPlace.address_components.forEach((component: any) => {
+        const types = component.types;
+        if (types.includes('street_number')) {
+          street = component.long_name + ' ';
+        } else if (types.includes('route')) {
+          street += component.long_name;
+        } else if (types.includes('locality')) {
+          city = component.long_name;
+        } else if (types.includes('administrative_area_level_1')) {
+          state = component.short_name;
+        } else if (types.includes('postal_code')) {
+          zip = component.long_name;
+        }
+      });
+
+      // Update form values
+      form.setValue('deliveryLine1', street.trim());
+      form.setValue('deliveryCity', city);
+      form.setValue('deliveryState', state);
+      form.setValue('deliveryZip', zip);
+      
+      // Clear the selected place to prevent re-triggering
+      setSelectedPlace(null);
+    }
+  }, [selectedPlace, form]);
+
   // Load Google Maps script and initialize autocomplete
   useEffect(() => {
     const loadGoogleMaps = () => {
@@ -230,6 +265,8 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current?.getPlace();
         if (place && place.formatted_address) {
+          setSelectedPlace(place);
+          
           let street = '';
           let city = '';
           let state = '';
@@ -251,15 +288,6 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
               }
             });
           }
-
-          // Update form values immediately and trigger validation
-          form.setValue('deliveryLine1', street.trim(), { shouldValidate: true, shouldDirty: true });
-          form.setValue('deliveryCity', city, { shouldValidate: true, shouldDirty: true });
-          form.setValue('deliveryState', state, { shouldValidate: true, shouldDirty: true });
-          form.setValue('deliveryZip', zip, { shouldValidate: true, shouldDirty: true });
-
-          // Force form re-render
-          form.trigger(['deliveryLine1', 'deliveryCity', 'deliveryState', 'deliveryZip']);
 
           // Calculate distance if we have coordinates
           if (place.geometry && place.geometry.location) {
@@ -293,11 +321,6 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                 distance: Math.round(distance)
               }));
             }
-          }
-
-          // Blur the input to dismiss the dropdown
-          if (addressInputRef.current) {
-            addressInputRef.current.blur();
           }
         }
       });
@@ -444,13 +467,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                           <Input 
                             placeholder="Start typing address..." 
                             value={field.value}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              // Reset autocomplete when user types manually
-                              if (autocompleteRef.current) {
-                                autocompleteRef.current.set('place', null);
-                              }
-                            }}
+                            onChange={field.onChange}
                             onBlur={field.onBlur}
                             ref={addressInputRef}
                             className="h-8" 
