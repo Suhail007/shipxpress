@@ -167,7 +167,7 @@ export default function ClientOrders() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{billingData.totalWeight.toFixed(1)} lbs</div>
+                  <div className="text-2xl font-bold">{Number(billingData.totalWeight || 0).toFixed(1)} lbs</div>
                   <p className="text-xs text-muted-foreground">@$0.75 per pound</p>
                 </CardContent>
               </Card>
@@ -178,7 +178,7 @@ export default function ClientOrders() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{billingData.totalDistance.toFixed(1)} mi</div>
+                  <div className="text-2xl font-bold">{Number(billingData.totalDistance || 0).toFixed(1)} mi</div>
                   <p className="text-xs text-muted-foreground">@$0.025 per mile</p>
                 </CardContent>
               </Card>
@@ -189,7 +189,7 @@ export default function ClientOrders() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${billingData.totalCharges.toFixed(2)}</div>
+                  <div className="text-2xl font-bold">${Number(billingData.totalCharges || 0).toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">Current billing period</p>
                 </CardContent>
               </Card>
