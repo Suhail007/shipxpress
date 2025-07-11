@@ -139,10 +139,10 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(clients)
       .where(and(
         or(
-          eq(clients.username, username),
+          eq(clients.loginUsername, username),
           eq(clients.contactEmail, username)
         ),
-        eq(clients.password, password)
+        eq(clients.loginPassword, password)
       )).limit(1);
     return result[0];
   }
