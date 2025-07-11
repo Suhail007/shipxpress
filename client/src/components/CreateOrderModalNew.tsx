@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -40,7 +40,8 @@ function getTodayDate() {
 export function CreateOrderModalNew({ open, onOpenChange }: CreateOrderModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [costEstimate, setCostEstimate] = useState({ weight: 0, distance: 25, total: 0 });
+  const [costEstimate, setCostEstimate] = useState({ weight: 1, distance: 25, total: 0 });
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const form = useForm<CreateOrderForm>({
     resolver: zodResolver(insertOrderSchema.omit({ 
@@ -96,32 +97,79 @@ export function CreateOrderModalNew({ open, onOpenChange }: CreateOrderModalProp
 
   // Calculate cost estimate
   const calculateCostEstimate = useCallback(() => {
-    const packages = form.getValues('packages');
-    const totalWeight = packages.reduce((sum, pkg) => sum + (pkg.weight || 0), 0);
-    const distance = 25; // Default distance
-    
     const weightRate = 0.50; // $0.50 per pound
     const distanceRate = 0.75; // $0.75 per mile
     const baseFee = 5.00; // $5 base fee
     
-    const weightCost = totalWeight * weightRate;
-    const distanceCost = distance * distanceRate;
+    const weightCost = costEstimate.weight * weightRate;
+    const distanceCost = costEstimate.distance * distanceRate;
     const total = baseFee + weightCost + distanceCost;
     
-    setCostEstimate({
-      weight: totalWeight,
-      distance,
+    setCostEstimate(prev => ({
+      ...prev,
       total: Math.round(total * 100) / 100
-    });
-  }, [form]);
+    }));
+  }, [costEstimate.weight, costEstimate.distance]);
 
-  // Watch form changes to update cost estimate
+  // Initialize Google Places Autocomplete
   useEffect(() => {
-    const subscription = form.watch(() => {
-      calculateCostEstimate();
-    });
-    return () => subscription.unsubscribe();
-  }, [form, calculateCostEstimate]);
+    if (open && window.google?.maps?.places) {
+      const input = document.getElementById('address-autocomplete') as HTMLInputElement;
+      if (input && !autocompleteRef.current) {
+        autocompleteRef.current = new window.google.maps.places.Autocomplete(input, {
+          types: ['address'],
+          componentRestrictions: { country: 'us' }
+        });
+
+        autocompleteRef.current.addListener('place_changed', () => {
+          const place = autocompleteRef.current?.getPlace();
+          if (place?.address_components) {
+            const addressComponents = place.address_components;
+            
+            // Extract address components
+            let streetNumber = '';
+            let streetName = '';
+            let city = '';
+            let state = '';
+            let zip = '';
+            
+            addressComponents.forEach(component => {
+              const types = component.types;
+              if (types.includes('street_number')) {
+                streetNumber = component.long_name;
+              } else if (types.includes('route')) {
+                streetName = component.long_name;
+              } else if (types.includes('locality')) {
+                city = component.long_name;
+              } else if (types.includes('administrative_area_level_1')) {
+                state = component.short_name;
+              } else if (types.includes('postal_code')) {
+                zip = component.long_name;
+              }
+            });
+            
+            // Update form with address components
+            form.setValue('deliveryLine1', `${streetNumber} ${streetName}`.trim());
+            form.setValue('deliveryCity', city);
+            form.setValue('deliveryState', state);
+            form.setValue('deliveryZip', zip);
+          }
+        });
+      }
+    }
+    
+    return () => {
+      if (autocompleteRef.current) {
+        window.google?.maps?.event?.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
+      }
+    };
+  }, [open, form]);
+
+  // Calculate cost estimate when weight/distance changes
+  useEffect(() => {
+    calculateCostEstimate();
+  }, [calculateCostEstimate]);
 
   const createOrderMutation = useMutation({
     mutationFn: (data: CreateOrderForm) => {
@@ -154,9 +202,9 @@ export function CreateOrderModalNew({ open, onOpenChange }: CreateOrderModalProp
     // Transform the data for the API
     const transformedData = {
       ...data,
-      packages: JSON.stringify(data.packages || [{ description: "Package", quantity: 1 }]),
-      weight: data.weight || 1,
-      distance: data.distance || 25,
+      packages: data.packages || [{ description: "Package", quantity: 1 }],
+      weight: costEstimate.weight || 1,
+      distance: costEstimate.distance || 25,
     };
     
     createOrderMutation.mutate(transformedData);
@@ -260,11 +308,14 @@ export function CreateOrderModalNew({ open, onOpenChange }: CreateOrderModalProp
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <Input 
-                              placeholder="Address Line 1" 
-                              className="h-9" 
-                              {...field} 
-                            />
+                            <div className="relative">
+                              <Input 
+                                placeholder="Address Line 1" 
+                                className="h-9" 
+                                {...field}
+                                id="address-autocomplete"
+                              />
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -434,8 +485,10 @@ export function CreateOrderModalNew({ open, onOpenChange }: CreateOrderModalProp
                     <Input 
                       type="number" 
                       value={costEstimate.weight} 
+                      onChange={(e) => setCostEstimate(prev => ({ ...prev, weight: parseFloat(e.target.value) || 0 }))}
                       className="h-8 text-sm"
-                      readOnly
+                      min="0"
+                      step="0.1"
                     />
                     <span className="text-xs">(lbs)</span>
                   </div>
