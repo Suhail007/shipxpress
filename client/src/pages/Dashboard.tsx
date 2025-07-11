@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -8,10 +8,12 @@ import Header from "@/components/Header";
 import StatsGrid from "@/components/StatsGrid";
 import OrdersTable from "@/components/OrdersTable";
 import DriversWidget from "@/components/DriversWidget";
+import { CreateOrderModalNew } from "@/components/CreateOrderModalNew";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const [createOrderOpen, setCreateOrderOpen] = useState(false);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -69,7 +71,10 @@ export default function Dashboard() {
               <div className="bg-white rounded-lg shadow-material p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
                 <div className="space-y-3">
-                  <button className="w-full flex items-center px-4 py-3 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors">
+                  <button 
+                    onClick={() => setCreateOrderOpen(true)}
+                    className="w-full flex items-center px-4 py-3 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 transition-colors"
+                  >
                     <i className="fas fa-plus mr-3"></i>
                     Create New Order
                   </button>
@@ -91,6 +96,12 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
+      
+      {/* Create Order Modal */}
+      <CreateOrderModalNew 
+        open={createOrderOpen} 
+        onOpenChange={setCreateOrderOpen} 
+      />
     </div>
   );
 }

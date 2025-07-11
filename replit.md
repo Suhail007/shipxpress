@@ -134,6 +134,13 @@ SESSION_SECRET=your-session-secret-here
 - UTF8MB4 character set for full Unicode support
 
 ## Recent Changes
+- July 11, 2025: **Split-Screen Order Creation Modal** - Created new order creation interface matching shipping label design
+  - Built split-screen modal with form fields on left and blue preview panel on right
+  - Integrated cost calculation with weight and distance estimates
+  - Applied modal universally across all order creation buttons (dashboard, orders table, client interface)
+  - Removed old modal components and standardized on new design
+  - Fixed database schema column name mismatches for PostgreSQL compatibility
+
 - July 2, 2025: **ShippXpress Complete Rebranding** - Successfully rebranded LogiTrack to ShippXpress
   - Integrated ship logo and created professional navy/orange color scheme
   - Built comprehensive sidebar navigation with collapsible design and navigation icons

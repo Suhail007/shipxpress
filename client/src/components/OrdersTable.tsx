@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Eye, Route, Edit, Plus, Upload, Phone, MapPin, Clock, FileText, Printer, X, Package2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { NewCreateOrderModal } from "./NewCreateOrderModal";
+import { CreateOrderModalNew } from "./CreateOrderModalNew";
 import ShippingLabel from "./ShippingLabel";
 import { Order, Driver } from "@shared/schema";
 
@@ -493,7 +493,7 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
         </CardContent>
       </Card>
 
-      <NewCreateOrderModal 
+      <CreateOrderModalNew 
         open={showCreateModal} 
         onOpenChange={setShowCreateModal}
       />
