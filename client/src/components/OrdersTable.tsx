@@ -34,7 +34,7 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
   const activeStatusFilter = propStatusFilter || statusFilter;
 
   const { data: orders = [], isLoading } = useQuery<Order[]>({
-    queryKey: ["/api/orders", { status: activeStatusFilter, search: searchQuery }],
+    queryKey: ["/api/orders", { status: activeStatusFilter === 'all' ? undefined : activeStatusFilter, search: searchQuery || undefined }],
   });
 
   const { data: availableDrivers = [] } = useQuery<Driver[]>({

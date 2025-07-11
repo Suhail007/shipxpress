@@ -183,7 +183,11 @@ export function CreateOrderModalNew({ open, onOpenChange }: CreateOrderModalProp
         title: "Success",
         description: "Order created successfully!",
       });
+      // Invalidate all order-related queries with different parameter combinations
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orders', { status: undefined, search: undefined }] });
+      queryClient.invalidateQueries({ queryKey: ['/api/orders', { status: undefined }] });
+      queryClient.refetchQueries({ queryKey: ['/api/orders'] });
       form.reset();
       onOpenChange(false);
     },
