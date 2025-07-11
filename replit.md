@@ -1,8 +1,8 @@
-# LogiTrack - Logistics Management Platform
+# ShipExpress - Logistics Management Platform
 
 ## Overview
 
-LogiTrack is a comprehensive logistics management platform that provides real-time order tracking, driver management, and delivery coordination capabilities. The system serves both business administrators and drivers through different interfaces - an admin web portal for business operations and a mobile-friendly driver app for field operations.
+ShipExpress is a comprehensive logistics management platform that provides real-time order tracking, driver management, and delivery coordination capabilities. The system serves both business administrators and drivers through different interfaces - an admin web portal for business operations and a mobile-friendly driver app for field operations.
 
 ## System Architecture
 

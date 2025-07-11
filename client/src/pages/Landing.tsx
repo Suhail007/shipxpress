@@ -10,7 +10,7 @@ export default function Landing() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Truck className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-gray-900">LogiTrack</h1>
+            <h1 className="text-2xl font-bold text-gray-900">ShipExpress</h1>
           </div>
           <Button onClick={() => window.location.href = "/api/login"}>
             Sign In
@@ -21,7 +21,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 text-center">
         <h1 className="text-5xl font-bold text-gray-900 mb-6">
-          Advanced Logistics Platform
+          ShipExpress Logistics Platform
         </h1>
         <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
           Streamline your delivery operations with real-time tracking, automated assignment, 
@@ -120,7 +120,7 @@ export default function Landing() {
             Ready to Transform Your Logistics?
           </h2>
           <p className="text-xl mb-8 text-primary-100">
-            Join thousands of businesses already using LogiTrack to optimize their delivery operations.
+            Join thousands of businesses already using ShipExpress to optimize their delivery operations.
           </p>
           <Button 
             size="lg" 
@@ -137,10 +137,10 @@ export default function Landing() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Truck className="h-6 w-6" />
-            <span className="text-xl font-bold">LogiTrack</span>
+            <span className="text-xl font-bold">ShipExpress</span>
           </div>
           <p className="text-gray-400">
-            © 2024 LogiTrack. All rights reserved. Built for the future of logistics.
+            © 2024 ShipExpress. All rights reserved. Built for the future of logistics.
           </p>
         </div>
       </footer>

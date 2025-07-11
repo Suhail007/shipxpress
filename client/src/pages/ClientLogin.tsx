@@ -170,7 +170,7 @@ export default function ClientLogin() {
         <div className="text-center">
           <p className="text-sm text-gray-600">
             Need help accessing your account?{" "}
-            <a href="mailto:support@logitrack.com" className="text-blue-600 hover:text-blue-500">
+            <a href="mailto:support@shipexpress.com" className="text-blue-600 hover:text-blue-500">
               Contact Support
             </a>
           </p>

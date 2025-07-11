@@ -25,7 +25,7 @@ export default function Sidebar() {
         <div className="p-6 border-b border-gray-200">
           <h1 className="text-xl font-bold text-gray-800 flex items-center">
             <Truck className="h-6 w-6 text-primary-600 mr-2" />
-            LogiTrack
+            ShipExpress
           </h1>
           <p className="text-sm text-gray-500">Logistics Platform</p>
         </div>
