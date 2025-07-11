@@ -50,7 +50,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
-  const [selectedPlace, setSelectedPlace] = useState<any>(null);
+
 
   // Get client's current location
   const getCurrentLocation = useCallback(() => {
@@ -200,39 +200,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
     }
   }, [deliveryAddress, deliveryCity, deliveryState, deliveryZip, calculateDistance]);
 
-  // Update form when place is selected from autocomplete
-  useEffect(() => {
-    if (selectedPlace && selectedPlace.address_components) {
-      let street = '';
-      let city = '';
-      let state = '';
-      let zip = '';
 
-      selectedPlace.address_components.forEach((component: any) => {
-        const types = component.types;
-        if (types.includes('street_number')) {
-          street = component.long_name + ' ';
-        } else if (types.includes('route')) {
-          street += component.long_name;
-        } else if (types.includes('locality')) {
-          city = component.long_name;
-        } else if (types.includes('administrative_area_level_1')) {
-          state = component.short_name;
-        } else if (types.includes('postal_code')) {
-          zip = component.long_name;
-        }
-      });
-
-      // Update form values
-      form.setValue('deliveryLine1', street.trim());
-      form.setValue('deliveryCity', city);
-      form.setValue('deliveryState', state);
-      form.setValue('deliveryZip', zip);
-      
-      // Clear the selected place to prevent re-triggering
-      setSelectedPlace(null);
-    }
-  }, [selectedPlace, form]);
 
   // Load Google Maps script and initialize autocomplete
   useEffect(() => {
@@ -265,8 +233,6 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
       autocompleteRef.current.addListener('place_changed', () => {
         const place = autocompleteRef.current?.getPlace();
         if (place && place.formatted_address) {
-          setSelectedPlace(place);
-          
           let street = '';
           let city = '';
           let state = '';
@@ -287,6 +253,12 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
                 zip = component.long_name;
               }
             });
+
+            // Update form values directly
+            form.setValue('deliveryLine1', street.trim());
+            form.setValue('deliveryCity', city);
+            form.setValue('deliveryState', state);
+            form.setValue('deliveryZip', zip);
           }
 
           // Calculate distance if we have coordinates
