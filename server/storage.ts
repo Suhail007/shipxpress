@@ -203,7 +203,7 @@ export class DatabaseStorage implements IStorage {
     };
     
     if (location) {
-      updateData.currentLocation = location;
+      updateData.location = location;
     }
 
     const [driver] = await db.update(drivers).set(updateData).where(eq(drivers.id, id)).returning();
@@ -214,14 +214,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(drivers)
       .where(and(
         eq(drivers.status, "online"),
-        eq(drivers.isActive, true)
+        eq(drivers.isAvailable, true)
       ));
   }
 
   async assignDriverToZone(driverId: number, zoneId: number): Promise<Driver> {
     const [driver] = await db.update(drivers)
       .set({
-        zoneId: zoneId,
+        assignedZoneId: zoneId,
         updatedAt: new Date(),
       })
       .where(eq(drivers.id, driverId))
@@ -230,7 +230,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDriversByZone(zoneId: number): Promise<Driver[]> {
-    return await db.select().from(drivers).where(eq(drivers.zoneId, zoneId));
+    return await db.select().from(drivers).where(eq(drivers.assignedZoneId, zoneId));
   }
 
   // Customer operations
