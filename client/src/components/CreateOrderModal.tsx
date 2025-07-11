@@ -382,7 +382,7 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>
@@ -391,53 +391,56 @@ export default function CreateOrderModal({ open, onOpenChange }: CreateOrderModa
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Customer Information - Right to Left Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <FormField
-                  control={form.control}
-                  name="customerEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="john@example.com" className="h-8" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="customerPhone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">Phone</FormLabel>
-                      <FormControl>
-                        <Input placeholder="(555) 123-4567" className="h-8" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="space-y-3">
-                <FormField
-                  control={form.control}
-                  name="customerName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm">Customer Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="John Doe" className="h-8" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            {/* Split Screen Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[70vh]">
+              
+              {/* Left Side - Form */}
+              <div className="space-y-4 overflow-y-auto pr-4">
+                {/* Customer Information */}
+                <div className="space-y-3">
+                  <h3 className="font-medium text-sm">Customer Information</h3>
+                    <FormField
+                      control={form.control}
+                      name="customerName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Customer Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John Doe" className="h-8" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customerEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="john@example.com" className="h-8" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customerPhone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm">Phone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(555) 123-4567" className="h-8" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
             {/* Delivery Address - Compact */}
             <div className="space-y-3">
