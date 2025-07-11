@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -27,6 +27,8 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showShippingLabel, setShowShippingLabel] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage] = useState(10);
 
@@ -36,6 +38,24 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
   const { data: orders = [], isLoading } = useQuery<Order[]>({
     queryKey: ["/api/orders", { status: activeStatusFilter === 'all' ? undefined : activeStatusFilter, search: searchQuery || undefined }],
   });
+
+  // Listen for shipping label events from order creation
+  useEffect(() => {
+    const handleOpenShippingLabel = (event: CustomEvent) => {
+      const { orderId, orderNumber } = event.detail;
+      // Find the order in current data or fetch it
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        setSelectedOrder(order);
+        setShowShippingLabel(true);
+      }
+    };
+
+    window.addEventListener('openShippingLabel', handleOpenShippingLabel as EventListener);
+    return () => {
+      window.removeEventListener('openShippingLabel', handleOpenShippingLabel as EventListener);
+    };
+  }, [orders]);
 
   const { data: availableDrivers = [] } = useQuery<Driver[]>({
     queryKey: ["/api/drivers/available"],
@@ -479,14 +499,36 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
           {!limit && displayedOrders && displayedOrders.length > 0 && (
             <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                Showing 1 to {displayedOrders.length} of {orders.length} orders
+                Showing {((currentPage - 1) * ordersPerPage) + 1} to {Math.min(currentPage * ordersPerPage, orders.length)} of {orders.length} orders
               </div>
               <div className="flex space-x-1">
-                <Button size="sm" variant="outline">Previous</Button>
-                <Button size="sm" className="bg-primary-600 text-white">1</Button>
-                <Button size="sm" variant="outline">2</Button>
-                <Button size="sm" variant="outline">3</Button>
-                <Button size="sm" variant="outline">Next</Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                >
+                  Previous
+                </Button>
+                {Array.from({ length: Math.ceil(orders.length / ordersPerPage) }, (_, i) => i + 1).map((page) => (
+                  <Button 
+                    key={page}
+                    size="sm" 
+                    variant={currentPage === page ? "default" : "outline"}
+                    onClick={() => setCurrentPage(page)}
+                    className={currentPage === page ? "bg-shippxpress-navy text-white" : ""}
+                  >
+                    {page}
+                  </Button>
+                ))}
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  disabled={currentPage === Math.ceil(orders.length / ordersPerPage)}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                >
+                  Next
+                </Button>
               </div>
             </div>
           )}
@@ -497,6 +539,31 @@ export default function OrdersTable({ limit, showFilters = true, statusFilter: p
         open={showCreateModal} 
         onOpenChange={setShowCreateModal}
       />
+
+      {/* Shipping Label Dialog */}
+      <Dialog open={showShippingLabel} onOpenChange={setShowShippingLabel}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-6">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-xl">Shipping Labels - {selectedOrder?.orderNumber}</DialogTitle>
+          </DialogHeader>
+          {selectedOrder && (
+            <div className="space-y-8">
+              {selectedOrder.packages?.map((pkg: any, index: number) => (
+                <div key={index} className="border-b border-gray-200 pb-6 last:border-b-0">
+                  <h3 className="font-semibold text-lg mb-4 text-gray-800">
+                    Package {index + 1} of {selectedOrder.packages.length}
+                  </h3>
+                  <div className="flex justify-center">
+                    <ShippingLabel 
+                      order={{...selectedOrder, currentPackage: index + 1, totalPackages: selectedOrder.packages.length, packageDetails: pkg}} 
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

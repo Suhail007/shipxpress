@@ -178,18 +178,32 @@ export function CreateOrderModalNew({ open, onOpenChange }: CreateOrderModalProp
         body: JSON.stringify(data),
       });
     },
-    onSuccess: () => {
+    onSuccess: async (response) => {
+      // Get the created order from response
+      const order = await response.json();
+      
       toast({
         title: "Success",
         description: "Order created successfully!",
       });
-      // Invalidate all order-related queries with different parameter combinations
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/orders', { status: undefined, search: undefined }] });
-      queryClient.invalidateQueries({ queryKey: ['/api/orders', { status: undefined }] });
-      queryClient.refetchQueries({ queryKey: ['/api/orders'] });
+      
+      // Clear all cache and force fresh data
+      queryClient.clear();
+      await queryClient.refetchQueries({ queryKey: ['/api/orders'] });
+      
       form.reset();
       onOpenChange(false);
+      
+      // Small delay to ensure the orders table has loaded the new data
+      setTimeout(() => {
+        if (order?.id) {
+          // Trigger shipping label popup
+          const event = new CustomEvent('openShippingLabel', { 
+            detail: { orderId: order.id, orderNumber: order.orderNumber } 
+          });
+          window.dispatchEvent(event);
+        }
+      }, 500);
     },
     onError: (error) => {
       toast({
