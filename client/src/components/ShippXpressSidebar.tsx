@@ -99,12 +99,12 @@ export default function ShippXpressSidebar({ className }: SidebarProps) {
         <div className="flex items-center space-x-3">
           <img 
             src={shippxpressLogo} 
-            alt="ShippXpress" 
+            alt="Ship Station" 
             className="w-10 h-10 rounded-lg shadow-lg"
           />
           {!collapsed && (
             <div>
-              <h1 className="text-xl font-bold text-white">ShippXpress</h1>
+              <h1 className="text-xl font-bold text-white">Ship Station</h1>
               <p className="text-xs text-white/70">Logistics Platform</p>
             </div>
           )}

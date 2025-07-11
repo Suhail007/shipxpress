@@ -113,7 +113,7 @@ export default function ShippingLabel({ order, onClose }: ShippingLabelProps) {
           <div className="border-b-2 border-black pb-2 mb-3">
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-xl font-bold">LogiTrack</h1>
+                <h1 className="text-xl font-bold">Ship Station</h1>
                 <p className="text-xs">Express Delivery</p>
               </div>
               <div className="text-right text-xs">
@@ -132,7 +132,7 @@ export default function ShippingLabel({ order, onClose }: ShippingLabelProps) {
           <div className="mb-3">
             <p className="text-xs font-bold mb-1">FROM:</p>
             <div className="text-xs leading-tight">
-              <p>LogiTrack Logistics Center</p>
+              <p>Ship Station Logistics Center</p>
               <p>1234 Warehouse Blvd</p>
               <p>Distribution City, CA 90210</p>
               <p>Phone: (555) 123-4567</p>

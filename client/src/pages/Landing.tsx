@@ -64,9 +64,9 @@ export default function Landing() {
       <header className="border-b bg-white/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <img src={shippxpressLogo} alt="ShippXpress" className="h-10 w-10 rounded-lg shadow-md" />
+            <img src={shippxpressLogo} alt="Ship Station" className="h-10 w-10 rounded-lg shadow-md" />
             <div>
-              <h1 className="text-2xl font-bold text-shippxpress-navy">ShippXpress</h1>
+              <h1 className="text-2xl font-bold text-shippxpress-navy">Ship Station</h1>
               <p className="text-xs text-gray-600">Logistics Excellence</p>
             </div>
           </div>
@@ -102,7 +102,7 @@ export default function Landing() {
                 <span className="text-shippxpress-orange"> Logistics</span>
               </h1>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Powered by AI and built for scale, ShippXpress delivers unmatched efficiency in order management, 
+                Powered by AI and built for scale, Ship Station delivers unmatched efficiency in order management, 
                 route optimization, and real-time tracking for modern businesses.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center lg:justify-start">
@@ -245,7 +245,7 @@ export default function Landing() {
             Ready to Transform Your Logistics?
           </h2>
           <p className="text-xl mb-8 text-primary-100">
-            Join thousands of businesses already using LogiTrack to optimize their delivery operations.
+            Join thousands of businesses already using Ship Station to optimize their delivery operations.
           </p>
           <Button 
             size="lg" 
@@ -262,10 +262,10 @@ export default function Landing() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Truck className="h-6 w-6" />
-            <span className="text-xl font-bold">LogiTrack</span>
+            <span className="text-xl font-bold">Ship Station</span>
           </div>
           <p className="text-gray-400">
-            © 2024 LogiTrack. All rights reserved. Built for the future of logistics.
+            © 2024 Ship Station. All rights reserved. Built by Phantasm Solutions.
           </p>
         </div>
       </footer>

@@ -1,4 +1,4 @@
--- LogiTrack MySQL Database Setup
+-- Ship Station MySQL Database Setup
 -- Run this script to create the MySQL database structure
 
 -- Create database
