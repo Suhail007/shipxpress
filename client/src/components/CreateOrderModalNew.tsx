@@ -175,7 +175,7 @@ export function CreateOrderModalNew({ open, onOpenChange }: CreateOrderModalProp
     mutationFn: (data: CreateOrderForm) => {
       return apiRequest("/api/orders", {
         method: "POST",
-        body: data,
+        body: JSON.stringify(data),
       });
     },
     onSuccess: () => {
