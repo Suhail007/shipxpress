@@ -179,18 +179,20 @@ export default function ShippingLabel({ order, onClose }: ShippingLabelProps) {
             </div>
             
             <div className="mt-2">
-              <p className="font-bold">Package Details:</p>
+              <p className="font-bold mb-1">Package Details:</p>
               {order.packageDetails ? (
-                <p className="text-xs">
+                <p className="text-xs leading-relaxed">
                   Package {order.currentPackage}: {order.packageDetails.dimensions?.length || 0}"×{order.packageDetails.dimensions?.width || 0}"×{order.packageDetails.dimensions?.height || 0}" - {order.packageDetails.weight || 0}lbs
-                  {order.packageDetails.description && <br />}<span className="italic">{order.packageDetails.description}</span>
+                  {order.packageDetails.description && <><br /><span className="italic mt-1 block">{order.packageDetails.description}</span></>}
                 </p>
               ) : packages.length > 0 ? (
-                packages.map((pkg, index) => (
-                  <p key={index} className="text-xs">
-                    #{index + 1}: {pkg.dimensions?.length || 0}"×{pkg.dimensions?.width || 0}"×{pkg.dimensions?.height || 0}" - {pkg.weight || 0}lbs
-                  </p>
-                ))
+                <div className="space-y-1">
+                  {packages.map((pkg, index) => (
+                    <p key={index} className="text-xs">
+                      #{index + 1}: {pkg.dimensions?.length || 0}"×{pkg.dimensions?.width || 0}"×{pkg.dimensions?.height || 0}" - {pkg.weight || 0}lbs
+                    </p>
+                  ))}
+                </div>
               ) : (
                 <p className="text-xs">No package details available</p>
               )}
@@ -198,9 +200,9 @@ export default function ShippingLabel({ order, onClose }: ShippingLabelProps) {
           </div>
 
           {/* Instructions */}
-          <div className="text-xs mt-2 border-t border-black pt-1">
-            <p className="font-bold">Special Instructions:</p>
-            <p>{order.specialInstructions || "Handle with care. Signature required."}</p>
+          <div className="text-xs mt-3 border-t border-black pt-2">
+            <p className="font-bold mb-1">Special Instructions:</p>
+            <p className="leading-relaxed">{order.specialInstructions || "Handle with care. Signature required."}</p>
           </div>
         </CardContent>
       </Card>
