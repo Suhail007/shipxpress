@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import OrdersTable from "@/components/OrdersTable";
-import { CreateOrderModalSplit } from "@/components/CreateOrderModalSplit";
+import { CreateOrderModalNew } from "@/components/CreateOrderModalNew";
 import ClientSidebar from "@/components/ClientSidebar";
 import BatchCountdown from "@/components/BatchCountdown";
 import { Package, AlertCircle, LogOut, DollarSign, FileText, X, Check, Printer, Upload, Plus } from "lucide-react";
@@ -199,7 +199,7 @@ export default function ClientOrders() {
       </div>
 
       {/* Create Order Modal */}
-      <CreateOrderModalSplit 
+      <CreateOrderModalNew 
         open={createOrderOpen} 
         onOpenChange={setCreateOrderOpen} 
       />
