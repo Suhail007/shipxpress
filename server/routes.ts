@@ -150,12 +150,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get client ID for client users
       let clientId = null;
-      if (user?.clientId) {
+      if (userId.startsWith('client_')) {
+        clientId = parseInt(userId.replace('client_', ''));
+      } else if (user?.clientId) {
         clientId = user.clientId;
       }
       
       const order = await storage.createOrder({
         ...orderData,
+        clientId: clientId,
         weight: totalWeight.toString(),
         distance: distance.toString(),
         createdBy: userId,
