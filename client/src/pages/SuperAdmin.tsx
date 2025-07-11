@@ -16,7 +16,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Building2, Users, MapPin, Route, Calendar, Settings } from "lucide-react";
+import { 
+  Building2, 
+  Users, 
+  MapPin, 
+  Route, 
+  Calendar, 
+  Settings,
+  Package,
+  Truck,
+  TrendingUp,
+  Activity,
+  DollarSign,
+  Clock,
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
+  UserPlus,
+  MapPinPlus
+} from "lucide-react";
+import ShippXpressSidebar from "@/components/ShippXpressSidebar";
 
 // Type definitions
 interface SuperAdminStats {
@@ -318,13 +341,16 @@ export default function SuperAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+    <div className="flex min-h-screen bg-gray-50">
+      <ShippXpressSidebar />
+      
+      <div className="flex-1 overflow-hidden">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Super Admin Dashboard</h1>
-              <p className="mt-2 text-gray-600">Manage all clients, drivers, zones, and route optimization</p>
+              <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
+              <p className="text-sm text-gray-600">Manage all clients, drivers, zones, and route optimization</p>
             </div>
             <Button 
               variant="outline" 
@@ -334,54 +360,58 @@ export default function SuperAdmin() {
             </Button>
           </div>
         </div>
-      </div>
+        
+        {/* Main Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="metric-card">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Building2 className="h-6 w-6 text-shippxpress-navy" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{(stats as any)?.totalClients || (clients as any)?.length || 0}</div>
+              <div className="text-sm text-gray-600">Total Clients</div>
+            </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalClients || clients.length}</div>
-            </CardContent>
-          </Card>
+            <div className="metric-card">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <Truck className="h-6 w-6 text-shippxpress-orange" />
+                </div>
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{(stats as any)?.totalDrivers || (drivers as any)?.length || 0}</div>
+              <div className="text-sm text-gray-600">Active Drivers</div>
+            </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Drivers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalDrivers || drivers.length}</div>
-            </CardContent>
-          </Card>
+            <div className="metric-card">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <MapPin className="h-6 w-6 text-green-600" />
+                </div>
+                <Activity className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{(stats as any)?.totalZones || (zones as any)?.length || 0}</div>
+              <div className="text-sm text-gray-600">Delivery Zones</div>
+            </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Zones</CardTitle>
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalZones || zones.length}</div>
-            </CardContent>
-          </Card>
+            <div className="metric-card">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Route className="h-6 w-6 text-purple-600" />
+                </div>
+                <Clock className="h-4 w-4 text-amber-600" />
+              </div>
+              <div className="text-2xl font-bold text-gray-900">{(stats as any)?.todayBatches || (batches as any)?.length || 0}</div>
+              <div className="text-sm text-gray-600">Today's Batches</div>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Batches</CardTitle>
-              <Route className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.todayBatches || batches.length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="clients" className="space-y-4">
+          {/* Main Content Tabs */}
+          <Tabs defaultValue="clients" className="space-y-4">
           <TabsList>
             <TabsTrigger value="clients">Clients</TabsTrigger>
             <TabsTrigger value="drivers">Drivers</TabsTrigger>
@@ -834,7 +864,8 @@ export default function SuperAdmin() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

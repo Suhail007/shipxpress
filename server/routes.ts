@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertOrderSchema, insertCustomerSchema, insertDriverSchema, updateOrderStatusSchema } from "@shared/schema";
 import { z } from "zod";
+import { sendOrderStatusNotification } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -12,7 +13,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const sessionUser = req.user;
+      
+      // Handle client sessions
+      if (sessionUser.client) {
+        const userId = sessionUser.claims.sub;
+        const user = await storage.getUser(userId);
+        return res.json({ ...user, client: sessionUser.client });
+      }
+      
+      // Handle OAuth sessions
+      const userId = sessionUser.claims.sub;
       const user = await storage.getUser(userId);
       
       // Get driver info if user is a driver
@@ -26,6 +37,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
+  });
+
+  // Google Maps API configuration
+  app.get("/api/config/google-maps-key", (req, res) => {
+    res.json({ 
+      apiKey: process.env.GOOGLE_MAPS_API_KEY || '' 
+    });
   });
 
   // Distance calculation using Google Maps API
@@ -81,6 +99,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, search } = req.query;
       const user = req.user.claims;
       
+      console.log(`[DEBUG] Orders API called - User: ${user.sub}, Status filter: ${status}, Search: ${search}`);
+      
       let orders;
       if (user.role === "driver") {
         const driver = await storage.getDriverByUserId(user.sub);
@@ -88,10 +108,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: "Driver profile not found" });
         }
         orders = await storage.getOrdersForDriver(driver.id, status);
+      } else if (user.sub.startsWith('client_')) {
+        // Client impersonation - get orders for specific client
+        const clientId = parseInt(user.sub.replace('client_', ''));
+        console.log(`[DEBUG] Getting orders for client ${clientId} with filters:`, { status, search });
+        orders = await storage.getOrdersForClient(clientId, { status, search });
       } else {
+        // Super admin - get all orders
         orders = await storage.getAllOrders({ status, search });
       }
       
+      console.log(`[DEBUG] Returned ${orders.length} orders`);
       res.json(orders);
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -176,6 +203,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const order = await storage.updateOrderStatus(orderId, statusUpdate, userId);
       
+      // Send email notification if customer email is available
+      if (order.customerEmail) {
+        try {
+          await sendOrderStatusNotification(order, statusUpdate.status, order.customerEmail);
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+          // Don't fail the request if email fails
+        }
+      }
+      
       // Log activity
       await storage.logActivity(
         userId,
@@ -208,6 +245,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedOrder = await storage.updateOrderStatus(order.id, statusUpdate, userId);
+      
+      // Send email notification if customer email is available
+      if (updatedOrder.customerEmail) {
+        try {
+          await sendOrderStatusNotification(updatedOrder, statusUpdate.status, updatedOrder.customerEmail);
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+          // Don't fail the request if email fails
+        }
+      }
       
       // Log activity
       await storage.logActivity(
@@ -503,11 +550,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Set up session similar to OAuth flow
-      req.login({ claims: { sub: user.id }, client }, (err) => {
+      const sessionUser = { claims: { sub: user.id }, client };
+      req.login(sessionUser, (err) => {
         if (err) {
+          console.error('Session error:', err);
           return res.status(500).json({ message: 'Session error' });
         }
-        res.json({ user, client });
+        
+        // Store user in session
+        req.session.passport = { user: sessionUser };
+        req.session.save(() => {
+          res.json({ user, client });
+        });
       });
       
     } catch (error) {
@@ -601,6 +655,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error voiding order:", error);
       res.status(500).json({ message: "Failed to void order" });
+    }
+  });
+
+  // Public order tracking endpoint (no authentication required)
+  app.get("/api/orders/track/:orderNumber", async (req, res) => {
+    try {
+      const { orderNumber } = req.params;
+      console.log(`[TRACK] Tracking order: ${orderNumber}`);
+      
+      const order = await storage.getOrderByNumber(orderNumber);
+      
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      // Return order details for tracking
+      res.json({
+        orderNumber: order.orderNumber,
+        status: order.status,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        deliveryLine1: order.deliveryLine1,
+        deliveryCity: order.deliveryCity,
+        deliveryState: order.deliveryState,
+        deliveryZip: order.deliveryZip,
+        weight: order.weight,
+        distance: order.distance,
+        pickupDate: order.pickupDate,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      });
+    } catch (error) {
+      console.error("Error tracking order:", error);
+      res.status(500).json({ message: "Failed to track order" });
     }
   });
 

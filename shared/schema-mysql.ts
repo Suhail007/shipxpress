@@ -17,157 +17,157 @@ import { relations } from "drizzle-orm";
 import { z } from "zod";
 
 // Session storage table.
-export const sessions = pgTable(
+export const sessions = mysqlTable(
   "sessions",
   {
     sid: varchar("sid", { length: 255 }).primaryKey(),
-    sess: jsonb("sess").notNull(),
+    sess: json("sess").notNull(),
     expire: timestamp("expire").notNull(),
   },
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
 // User storage table.
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().notNull(),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").notNull().default("client"), // super_admin, client, driver, staff
-  clientId: integer("client_id"),
+export const users = mysqlTable("users", {
+  id: varchar("id", { length: 255 }).primaryKey().notNull(),
+  email: varchar("email", { length: 255 }).unique(),
+  firstName: varchar("first_name", { length: 255 }),
+  lastName: varchar("last_name", { length: 255 }),
+  profileImageUrl: varchar("profile_image_url", { length: 500 }),
+  role: varchar("role", { length: 50 }).notNull().default("client"), // super_admin, client, driver, staff
+  clientId: int("client_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Drivers table for additional driver-specific information
-export const drivers = pgTable("drivers", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  licenseNumber: varchar("license_number"),
-  vehicle: varchar("vehicle"),
-  status: varchar("status").notNull().default("offline"), // online, offline, busy
-  currentLocation: jsonb("current_location"),
-  phoneNumber: varchar("phone_number"),
+export const drivers = mysqlTable("drivers", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: varchar("user_id", { length: 255 }).notNull().references(() => users.id),
+  licenseNumber: varchar("license_number", { length: 255 }),
+  vehicle: varchar("vehicle", { length: 255 }),
+  status: varchar("status", { length: 50 }).notNull().default("offline"), // online, offline, busy
+  currentLocation: json("current_location"),
+  phoneNumber: varchar("phone_number", { length: 20 }),
   isActive: boolean("is_active").notNull().default(true),
-  zoneId: integer("zone_id"),
+  zoneId: int("zone_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Orders table
-export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
-  orderNumber: varchar("order_number").notNull().unique(),
-  clientId: integer("client_id"),
-  customerId: integer("customer_id"),
-  driverId: integer("driver_id"),
-  zoneId: integer("zone_id"),
-  customerName: varchar("customer_name").notNull(),
-  customerPhone: varchar("customer_phone"),
-  customerEmail: varchar("customer_email"),
-  deliveryLine1: varchar("delivery_line1").notNull(),
-  deliveryLine2: varchar("delivery_line2"),
-  deliveryCity: varchar("delivery_city").notNull(),
-  deliveryState: varchar("delivery_state").notNull(),
-  deliveryZip: varchar("delivery_zip").notNull(),
-  deliveryCountry: varchar("delivery_country").notNull().default("USA"),
+export const orders = mysqlTable("orders", {
+  id: int("id").primaryKey().autoincrement(),
+  orderNumber: varchar("order_number", { length: 255 }).notNull().unique(),
+  clientId: int("client_id"),
+  customerId: int("customer_id"),
+  driverId: int("driver_id"),
+  zoneId: int("zone_id"),
+  customerName: varchar("customer_name", { length: 255 }).notNull(),
+  customerPhone: varchar("customer_phone", { length: 20 }),
+  customerEmail: varchar("customer_email", { length: 255 }),
+  deliveryLine1: varchar("delivery_line1", { length: 255 }).notNull(),
+  deliveryLine2: varchar("delivery_line2", { length: 255 }),
+  deliveryCity: varchar("delivery_city", { length: 255 }).notNull(),
+  deliveryState: varchar("delivery_state", { length: 100 }).notNull(),
+  deliveryZip: varchar("delivery_zip", { length: 20 }).notNull(),
+  deliveryCountry: varchar("delivery_country", { length: 100 }).notNull().default("USA"),
   pickupDate: date("pickup_date").notNull(),
-  packages: jsonb("packages").notNull(),
-  weight: numeric("weight", { precision: 10, scale: 2 }),
-  distance: numeric("distance", { precision: 10, scale: 2 }),
+  packages: json("packages").notNull(),
+  weight: decimal("weight", { precision: 10, scale: 2 }),
+  distance: decimal("distance", { precision: 10, scale: 2 }),
   specialInstructions: text("special_instructions"),
-  status: varchar("status").notNull().default("pending"), // pending, assigned, in_transit, delivered, voided
+  status: varchar("status", { length: 50 }).notNull().default("pending"), // pending, assigned, in_transit, delivered, voided
   assignedAt: timestamp("assigned_at"),
   pickedUpAt: timestamp("picked_up_at"),
   actualDeliveryTime: timestamp("actual_delivery_time"),
   estimatedDeliveryTime: timestamp("estimated_delivery_time"),
-  coordinates: jsonb("coordinates"),
-  createdBy: varchar("created_by"),
-  voidReason: varchar("void_reason"),
+  coordinates: json("coordinates"),
+  createdBy: varchar("created_by", { length: 255 }),
+  voidReason: varchar("void_reason", { length: 255 }),
   voidedAt: timestamp("voided_at"),
-  voidedBy: varchar("voided_by"),
-  batchId: integer("batch_id"),
+  voidedBy: varchar("voided_by", { length: 255 }),
+  batchId: int("batch_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Customers table
-export const customers = pgTable("customers", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  phone: varchar("phone"),
-  email: varchar("email"),
+export const customers = mysqlTable("customers", {
+  id: int("id").primaryKey().autoincrement(),
+  name: varchar("name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 255 }),
   address: text("address"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Order status history table
-export const orderStatusHistory = pgTable("order_status_history", {
-  id: serial("id").primaryKey(),
-  orderId: integer("order_id").notNull(),
-  status: varchar("status").notNull(),
+export const orderStatusHistory = mysqlTable("order_status_history", {
+  id: int("id").primaryKey().autoincrement(),
+  orderId: int("order_id").notNull(),
+  status: varchar("status", { length: 50 }).notNull(),
   timestamp: timestamp("timestamp").defaultNow(),
-  updatedBy: varchar("updated_by"),
+  updatedBy: varchar("updated_by", { length: 255 }),
   notes: text("notes"),
 });
 
 // Activity logs table
-export const activityLogs = pgTable("activity_logs", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull(),
-  action: varchar("action").notNull(),
+export const activityLogs = mysqlTable("activity_logs", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: varchar("user_id", { length: 255 }).notNull(),
+  action: varchar("action", { length: 255 }).notNull(),
   description: text("description"),
-  metadata: jsonb("metadata"),
+  metadata: json("metadata"),
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
 // Clients table for multi-tenant support
-export const clients = pgTable("clients", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
+export const clients = mysqlTable("clients", {
+  id: int("id").primaryKey().autoincrement(),
+  name: varchar("name", { length: 255 }).notNull(),
   address: text("address"),
-  contactEmail: varchar("contact_email"),
-  contactPhone: varchar("contact_phone"),
-  username: varchar("username").unique().notNull(),
-  password: varchar("password").notNull(),
+  contactEmail: varchar("contact_email", { length: 255 }),
+  contactPhone: varchar("contact_phone", { length: 20 }),
+  username: varchar("username", { length: 255 }).unique().notNull(),
+  password: varchar("password", { length: 255 }).notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Zones table for delivery zones
-export const zones = pgTable("zones", {
-  id: serial("id").primaryKey(),
-  name: varchar("name").notNull(),
-  direction: varchar("direction").notNull(), // North, South, East, West
-  radius: integer("radius").notNull().default(300), // miles
-  centerLat: numeric("center_lat", { precision: 10, scale: 8 }),
-  centerLng: numeric("center_lng", { precision: 11, scale: 8 }),
+export const zones = mysqlTable("zones", {
+  id: int("id").primaryKey().autoincrement(),
+  name: varchar("name", { length: 255 }).notNull(),
+  direction: varchar("direction", { length: 50 }).notNull(), // North, South, East, West
+  radius: int("radius").notNull().default(300), // miles
+  centerLat: decimal("center_lat", { precision: 10, scale: 8 }),
+  centerLng: decimal("center_lng", { precision: 11, scale: 8 }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Route batches table for daily batch processing
-export const routeBatches = pgTable("route_batches", {
-  id: serial("id").primaryKey(),
+export const routeBatches = mysqlTable("route_batches", {
+  id: int("id").primaryKey().autoincrement(),
   date: date("date").notNull(),
   cutoffTime: time("cutoff_time").notNull().default("14:30:00"), // 2:30 PM
-  status: varchar("status").notNull().default("open"), // open, processing, completed
-  totalOrders: integer("total_orders").notNull().default(0),
+  status: varchar("status", { length: 50 }).notNull().default("open"), // open, processing, completed
+  totalOrders: int("total_orders").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Optimized routes table
-export const optimizedRoutes = pgTable("optimized_routes", {
-  id: serial("id").primaryKey(),
-  batchId: integer("batch_id").notNull(),
-  zoneId: integer("zone_id").notNull(),
-  driverId: integer("driver_id"),
-  routeData: jsonb("route_data"),
-  estimatedDistance: numeric("estimated_distance", { precision: 10, scale: 2 }),
-  estimatedTime: integer("estimated_time"), // minutes
-  status: varchar("status").default("pending"), // pending, assigned, in_progress, completed
+export const optimizedRoutes = mysqlTable("optimized_routes", {
+  id: int("id").primaryKey().autoincrement(),
+  batchId: int("batch_id").notNull(),
+  zoneId: int("zone_id").notNull(),
+  driverId: int("driver_id"),
+  routeData: json("route_data"),
+  estimatedDistance: decimal("estimated_distance", { precision: 10, scale: 2 }),
+  estimatedTime: int("estimated_time"), // minutes
+  status: varchar("status", { length: 50 }).default("pending"), // pending, assigned, in_progress, completed
   assignedAt: timestamp("assigned_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -9,9 +9,11 @@ import Dashboard from "@/pages/Dashboard";
 import Orders from "@/pages/Orders";
 import Drivers from "@/pages/Drivers";
 import DriverApp from "@/pages/DriverApp";
-import SuperAdmin from "@/pages/SuperAdmin";
+import SuperAdminNew from "@/pages/SuperAdminNew";
 import ClientLogin from "@/pages/ClientLogin";
 import ClientOrders from "@/pages/ClientOrders";
+import ClientDashboard from "@/pages/ClientDashboard";
+import TrackOrder from "@/pages/TrackOrder";
 import { useAuth } from "@/hooks/useAuth";
 
 function Router() {
@@ -29,14 +31,21 @@ function Router() {
   }
 
   if (!isAuthenticated) {
-    return <Route path="/" component={Landing} />;
+    return (
+      <Switch>
+        <Route path="/" component={Landing} />
+        <Route path="/client-login" component={ClientLogin} />
+        <Route path="/track" component={TrackOrder} />
+        <Route component={Landing} />
+      </Switch>
+    );
   }
 
   // Role-based routing
   if (user?.role === "super_admin") {
     return (
       <Switch>
-        <Route path="/" component={SuperAdmin} />
+        <Route path="/" component={SuperAdminNew} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/orders" component={Orders} />
         <Route path="/drivers" component={Drivers} />
@@ -53,8 +62,13 @@ function Router() {
   if (user?.role === "client") {
     return (
       <Switch>
-        <Route path="/" component={ClientOrders} />
+        <Route path="/" component={ClientDashboard} />
+        <Route path="/dashboard" component={ClientDashboard} />
         <Route path="/orders" component={ClientOrders} />
+        <Route path="/orders/all" component={ClientOrders} />
+        <Route path="/orders/pending" component={ClientOrders} />
+        <Route path="/orders/in-transit" component={ClientOrders} />
+        <Route path="/track" component={TrackOrder} />
         <Route component={NotFound} />
       </Switch>
     );

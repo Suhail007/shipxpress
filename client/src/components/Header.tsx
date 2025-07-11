@@ -26,7 +26,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <Button variant="ghost" size="sm">
             <Menu className="h-5 w-5" />
           </Button>
-          <span className="ml-3 text-lg font-semibold">ShipExpress</span>
+          <span className="ml-3 text-lg font-semibold">LogiTrack</span>
         </div>
 
         <div className="flex items-center space-x-4">
